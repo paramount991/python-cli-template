@@ -15,19 +15,10 @@
 ## 快速开始
 
 ```bash
-# 一行生成项目（全部使用默认值）
-uvx copier copy gh:paramount991/python-cli-template my-project --trust --defaults
-
-# 不带示例模块（纯框架脚手架）
-uvx copier copy gh:paramount991/python-cli-template my-app --trust --defaults \
-  --data "with_example=false"
-
-# 自定义示例模块名
-uvx copier copy gh:paramount991/python-cli-template my-app --trust --defaults \
-  --data "example_name=train"
+uvx copier copy gh:paramount991/python-cli-template my-project --trust
 ```
 
-生成后自动执行 `uv sync` + `ruff check`，进入目录即可开始开发。
+Copier 会交互式询问项目名、包名等配置，确认后自动执行 `uv sync` + `ruff check`，进入目录即可开始开发。
 
 ## 模板变量
 
