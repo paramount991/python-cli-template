@@ -1,0 +1,156 @@
+---
+title: 使用指南
+---
+
+## CLI 结构
+
+```
+{{ project_slug }} [全局选项] COMMAND [ARGS]
+```
+
+### 全局选项
+
+| 选项 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `--config` | `PATH` | 用户配置目录 | 指定配置文件路径 |
+| `--logfile` | `PATH` | — | 日志文件路径 |
+| `-m, --msglevel` | `LEVEL` | `INFO` | 日志级别 |
+| `--verbose` | `flag` | — | 启用 DEBUG 日志 |
+| `--quiet` | `flag` | — | 仅显示 ERROR |
+| `-V, --version` | `flag` | — | 显示版本并退出 |
+
+日志级别可选值：`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
+
+### 子命令
+
+| 子命令 | 说明 |
+|--------|------|
+| `config` | 配置文件管理 |
+| `{{ example_name }}` | 示例业务模块 |
+| `version` | 显示版本信息 |
+
+---
+
+## config — 配置文件管理
+
+```bash
+{{ project_slug }} config [COMMAND]
+```
+
+| 命令 | 说明 |
+|------|------|
+| `init` | 写入默认配置到配置文件 |
+| `copy` | 复制预定义配置模板 |
+| `list` / `show` | 列出当前配置内容 |
+| `validate` | 校验配置文件格式 |
+| `set KEY VALUE` | 修改单个配置项 |
+| `get KEY` | 读取单个配置项 |
+| `path` | 打印配置文件路径 |
+
+### 示例
+
+```bash
+# 初始化配置
+{{ project_slug }} config init
+
+# 强制覆盖
+{{ project_slug }} config init --force
+
+# 查看配置
+{{ project_slug }} config list
+
+# 修改配置项
+{{ project_slug }} config set env.debug true
+{{ project_slug }} config set db.host 192.168.1.100
+{{ project_slug }} config set db.port 5432
+
+# 读取配置项
+{{ project_slug }} config get db.type
+
+# 校验配置
+{{ project_slug }} config validate
+```
+
+---
+
+## {{ example_name }} — 示例业务模块
+
+```bash
+{{ project_slug }} {{ example_name }} [COMMAND]
+```
+
+| 命令 | 说明 |
+|------|------|
+| `process` | 执行业务处理（示例） |
+
+### 示例
+
+```bash
+# 查看帮助
+{{ project_slug }} {{ example_name }} --help
+
+# 执行业务处理
+{{ project_slug }} {{ example_name }} process --input input.txt --output output.txt
+```
+
+---
+
+## version — 版本信息
+
+```bash
+{{ project_slug }} version
+# 输出: {{ project_description }} V0.1.0
+```
+
+---
+
+## 配置文件格式
+
+配置文件使用 TOML 格式：
+
+```toml
+[app]
+name = "{{ project_slug }}"
+version = "0.1.0"
+description = "{{ project_description }}"
+
+[env]
+environment = "development"  # development, staging, production, testing
+debug = false
+
+[log]
+level = "INFO"               # DEBUG, INFO, WARNING, ERROR, CRITICAL
+format = "json"              # json, text
+output = "console"           # console, file, both
+dir_name = "logs"
+file_name = "app.log"
+max_bytes = 10485760         # 10MB
+backup_count = 5
+
+[db]
+type = "postgresql"          # postgresql, mysql, sqlite
+host = "localhost"
+port = 5432
+username = "postgres"
+password = ""
+database = "app"
+pool_size = 20
+max_overflow = 10
+pool_timeout = 30
+pool_recycle = 3600
+```
+
+### 配置优先级
+
+环境变量可覆盖 TOML 配置，CLI 参数优先级最高：
+
+```
+CLI 参数 > 环境变量 (RegModel_*) > .env > TOML 文件 > 默认值
+```
+
+环境变量示例：
+
+```bash
+export RegModel_env_environment=production
+export RegModel_db_host=db.example.com
+```

@@ -1,0 +1,21 @@
+"""{{ example_name }} 业务逻辑 (示例存根)."""
+
+from pathlib import Path
+
+from {{ package_slug }}.core.log import get_logger
+
+log = get_logger()
+
+
+def process(
+    input_path: Path | None = None,
+    output_path: Path | None = None,
+) -> None:
+    """执行 {{ example_name }} 业务处理.
+
+    Args:
+        input_path: 输入路径
+        output_path: 输出路径
+    """
+    # TODO: 实现具体的 {{ example_name }} 业务逻辑
+    pass

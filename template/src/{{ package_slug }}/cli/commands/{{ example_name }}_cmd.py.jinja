@@ -1,0 +1,33 @@
+"""{{ example_name }}: 示例业务子命令."""
+
+from pathlib import Path
+
+import typer
+
+from {{ package_slug }}.core import handle_errors, log_command
+from {{ package_slug }}.core.log import get_logger
+from {{ package_slug }}.{{ example_name }} import manager
+
+log = get_logger()
+
+app = typer.Typer(help='{{ example_name }} 业务管理')
+
+
+@app.command(help='执行 {{ example_name }} 业务处理')
+@handle_errors
+@log_command('process')
+def process(
+    input_path: Path | None = typer.Option(
+        None, '--input', '-i', help='输入路径'
+    ),
+    output_path: Path | None = typer.Option(
+        None, '--output', '-o', help='输出路径'
+    ),
+) -> None:
+    """执行 {{ example_name }} 业务处理.
+
+    Args:
+        input_path: 输入文件/目录路径
+        output_path: 输出文件/目录路径
+    """
+    manager.process(input_path=input_path, output_path=output_path)

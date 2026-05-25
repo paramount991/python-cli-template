@@ -1,0 +1,44 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: {{ project_slug }} 文档
+  description: {{ project_description }}
+  repo-url: https://github.com/paramount/{{ project_slug }}
+  repo-actions: [source]
+
+  navbar:
+    left:
+      - text: 首页
+        href: index.qmd
+      - text: 安装
+        href: installation.qmd
+      - text: 使用指南
+        href: usage.qmd
+      - text: API 参考
+        href: api.qmd
+    right:
+      - icon: github
+        href: https://github.com/paramount/{{ project_slug }}
+
+  sidebar:
+    style: docked
+    contents:
+      - section: 开始
+        contents:
+          - index.qmd
+          - installation.qmd
+      - section: 指南
+        contents:
+          - usage.qmd
+      - section: 参考
+        contents:
+          - api.qmd
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-copy: true
+    code-link: true

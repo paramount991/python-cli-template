@@ -1,0 +1,31 @@
+# {{ project_name }}
+
+{{ project_description }}，覆盖数据、特征、训练、评估、预测、部署、可视化的完整生命周期。
+
+## 文档
+
+在线文档：[https://{{ author_name | lower }}.github.io/{{ project_slug }}](https://{{ author_name | lower }}.github.io/{{ project_slug }})
+
+本地预览：
+
+```bash
+quarto preview docs/
+```
+
+## 安装
+
+```bash
+uv pip install -e .
+```
+
+## 使用
+
+```bash
+{{ project_slug }} --help
+```
+
+## 开发
+
+```bash
+uv sync --group dev
+```

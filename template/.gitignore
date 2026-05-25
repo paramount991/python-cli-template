@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# IDE
+.idea/
+
+# Ruff cache
+.ruff_cache/
+
+# Claude Code
+.claude/
+
+# Quarto / Jupyter generated files
+docs/_site/
+*.html
+*_files/
+*.quarto_ipynb
+
+# Environment files
+.env
