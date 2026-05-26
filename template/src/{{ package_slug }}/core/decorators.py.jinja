@@ -49,6 +49,6 @@ def handle_errors[**P, T](func: Callable[P, T]) -> Callable[P, T]:
         except Exception as e:
             log.error(f'命令执行失败: {e}', exc_info=True)
             typer.secho(f'错误: {e}', fg=typer.colors.RED, err=True)
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from None
 
     return wrapper

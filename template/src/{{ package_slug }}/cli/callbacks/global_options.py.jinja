@@ -109,7 +109,7 @@ def global_options(
         typer.echo('请使用子命令 help 查看帮助')
         raise typer.Exit()
 
-    # 无需加载完整配置的子命令。新增无需配置的命令时，加入此集合。
+    # 无需加载完整配置的子命令. 新增无需配置的命令时, 加入此集合.
     if sub_command not in ('config', 'version'):
         typer.echo(f'加载配置文件 {resolved_config or "(使用默认配置)"}')
         bootstrap_app(

@@ -14,13 +14,13 @@ import typer
 
 from {{ package_slug }}.cli.callbacks.global_options import GlobalOptions
 from {{ package_slug }}.core import constants as const
-from {{ package_slug }}.core.log import get_logger
-
-_audit_log = get_logger('config')
 from {{ package_slug }}.core.config.serializer import (
     save_default_config,
 )
 from {{ package_slug }}.core.config.settings import Settings, load_settings
+from {{ package_slug }}.core.log import get_logger
+
+_audit_log = get_logger('config')
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -232,13 +232,13 @@ def _coerce_value(raw: str, target_type: type) -> Any:
             return int(raw)
         except ValueError:
             typer.secho(f'无效的整数值: {raw}', fg=typer.colors.RED)
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from None
     if target_type is float:
         try:
             return float(raw)
         except ValueError:
             typer.secho(f'无效的浮点数值: {raw}', fg=typer.colors.RED)
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from None
     if target_type is str:
         return raw
     return raw
