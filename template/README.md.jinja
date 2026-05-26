@@ -15,17 +15,27 @@ quarto preview docs/
 ## 安装
 
 ```bash
-uv pip install -e .
+uv sync
 ```
 
 ## 使用
 
 ```bash
+# 查看帮助
 {{ project_slug }} --help
+
+# 常用子命令
+{{ project_slug }} config show
+{{ project_slug }} version
 ```
 
 ## 开发
 
 ```bash
-uv sync --group dev
+just install     # 安装依赖
+just lint        # 代码检查
+just fix         # 自动修复 + 格式化
+just test        # 运行测试
+just ci          # lint + test
+just run --help  # 运行 CLI（透传参数）
 ```
