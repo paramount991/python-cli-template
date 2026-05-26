@@ -1,0 +1,37 @@
+# justfile — {{ project_name }}
+# https://github.com/casey/just
+
+default: install
+
+# 安装依赖
+install:
+    uv sync
+
+# 代码检查
+lint:
+    uv run ruff check .
+
+# 代码修复 + 格式化
+fix:
+    uv run ruff check --fix .
+    uv run ruff format .
+
+# 运行测试
+test:
+    uv run pytest -v
+
+# 运行测试 + 覆盖率
+test-cov:
+    uv run pytest -v --cov={{ package_slug }} --cov-report=term-missing
+
+# 启动 CLI
+run *args="":
+    uv run {{ project_slug }} {% raw %}{{ args }}{% endraw %}
+
+# 清理构建产物
+clean:
+    -rm -rf .venv .pytest_cache .ruff_cache
+    -find . -type d -name __pycache__ -exec rm -rf {} +
+
+# CI 全流程
+ci: lint test
