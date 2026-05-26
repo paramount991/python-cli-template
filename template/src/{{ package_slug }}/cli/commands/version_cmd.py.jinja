@@ -7,7 +7,7 @@ import typer
 
 from {{ package_slug }}.core import constants as const
 
-app = typer.Typer(invoke_without_command=True)
+app = typer.Typer(invoke_without_command=True)  # 无子命令时直接调用回调, 打印版本
 
 
 @app.callback()

@@ -26,8 +26,8 @@ title: 使用指南
 | 子命令 | 说明 |
 |--------|------|
 | `config` | 配置文件管理 |
-| `{{ example_name }}` | 示例业务模块 |
-| `version` | 显示版本信息 |
+{% if with_example %}| `{{ example_name }}` | 示例业务模块 |
+{% endif %}| `version` | 显示版本信息 |
 
 ---
 
@@ -73,6 +73,7 @@ title: 使用指南
 
 ---
 
+{% if with_example %}
 ## {{ example_name }} — 示例业务模块
 
 ```bash
@@ -94,6 +95,7 @@ title: 使用指南
 ```
 
 ---
+{% endif %}
 
 ## version — 版本信息
 
