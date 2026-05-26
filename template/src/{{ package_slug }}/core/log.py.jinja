@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2026--2030. {{ author_name }}
+# Copyright (c) {{ author_name }}
 # All rights reserved.
 """日志管理模块."""
 
@@ -36,7 +36,7 @@ def init_logging(config: dict[str, Any]) -> None:
     level: str = config.get('level', 'INFO')
     # json: bool = config.get('json', False)
     log_file: str | Path | None = config.get('file_path')
-    backup_count: int = config.get('backup_count', 365)
+    backup_count: int = config.get('backup_count', 5)
     log_level = getattr(logging, level.upper(), logging.INFO)
 
     root = logging.getLogger()
