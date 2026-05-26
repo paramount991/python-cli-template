@@ -46,9 +46,10 @@ def _resolve_log_level(
 def global_options(
     ctx: typer.Context,
     config_file: str | None = typer.Option(
-        str(const.DEFAULT_CONFIG_PATH),
+        None,
         '--config',
-        help='指定配置文件',
+        help=f'指定配置文件 (默认: {const.DEFAULT_CONFIG_PATH})',
+        show_default=False,
         rich_help_panel='全局选项',
     ),
     log_file: str | None = typer.Option(
@@ -88,8 +89,15 @@ def global_options(
     """全局选项回调: 解析参数, 存入上下文, 按需启动应用."""
     msg_level = _resolve_log_level(verbose, quiet, msg_level)
 
+    # 解析配置路径: 仅当文件存在或用户显式指定时才加载
+    resolved_config: str | None = config_file
+    if config_file is None:
+        default_path = const.DEFAULT_CONFIG_PATH
+        if default_path.exists():
+            resolved_config = str(default_path)
+
     ctx.obj = GlobalOptions(
-        config_file=config_file,
+        config_file=resolved_config,
         log_file=log_file,
         msg_level=msg_level,
         verbose=verbose,
@@ -101,10 +109,11 @@ def global_options(
         typer.echo('请使用子命令 help 查看帮助')
         raise typer.Exit()
 
+    # 无需加载完整配置的子命令。新增无需配置的命令时，加入此集合。
     if sub_command not in ('config', 'version'):
-        typer.echo(f'加载配置文件 {config_file}')
+        typer.echo(f'加载配置文件 {resolved_config or "(使用默认配置)"}')
         bootstrap_app(
-            config_file=config_file,
+            config_file=resolved_config,
             msg_level=msg_level,
             log_file=log_file,
         )
