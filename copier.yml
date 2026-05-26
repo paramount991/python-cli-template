@@ -7,6 +7,8 @@ _tasks:
   - "uv sync"
   - "uv run ruff check ."
 
+_message_after_update: "更新完成。请检查 pyproject.toml、ruff.toml 是否有冲突，然后运行 uv sync && uv run ruff check ."
+
 # ==============================
 # 通用项目配置（无业务侵入）
 # ==============================
