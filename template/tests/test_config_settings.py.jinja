@@ -141,6 +141,63 @@ class TestLoadSettingsFromToml:
         assert settings.app.name == 'overridden-app'
 
 
+class TestFromTomlText:
+    """测试 from_toml_text 类方法 — 写入前校验."""
+
+    def test_parse_valid_toml_text(self) -> None:
+        text = """\
+[app]
+name = "parsed"
+version = "1.0.0"
+description = "test"
+
+[env]
+environment = "development"
+debug = false
+
+[log]
+level = "INFO"
+format = "json"
+output = "console"
+dir_name = "logs"
+file_name = "app.log"
+max_bytes = 10485760
+backup_count = 5
+
+[db]
+type = "postgresql"
+host = "localhost"
+port = 5432
+username = "user"
+password = ""
+database = "app"
+pool_size = 20
+max_overflow = 10
+pool_timeout = 30
+pool_recycle = 3600
+"""
+        settings = Settings.from_toml_text(text)
+        assert settings.app.name == 'parsed'
+        assert settings.db.host == 'localhost'
+
+    def test_extra_field_rejected(self) -> None:
+        """验证 extra='forbid' 在 from_toml_text 中生效."""
+        from pydantic import ValidationError
+
+        text = '[unknown_section]\nbad_field = "value"'
+        with pytest.raises(ValidationError):
+            Settings.from_toml_text(text)
+
+
+class TestMaxConfigSize:
+    """测试 MAX_CONFIG_SIZE 限制."""
+
+    def test_max_config_size_constant(self) -> None:
+        from {{ package_slug }}.core.config.settings import MAX_CONFIG_SIZE
+
+        assert MAX_CONFIG_SIZE == 10 * 1024 * 1024
+
+
 class TestSettingsSingleton:
     """测试 Settings 单例行为."""
 

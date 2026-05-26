@@ -35,6 +35,7 @@ def save_default_config(
     file_path = Path(file_path)
     if file_path.exists() and not overwrite:
         raise FileExistsError(f'文件已存在: {file_path}')
+    # model_construct() 绕过验证以获取纯默认值, 用于生成初始配置文件
     instance = Settings.model_construct()
     data = instance.model_dump(
         mode='json',

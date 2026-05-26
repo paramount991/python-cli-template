@@ -17,7 +17,7 @@ ENV_PREFIX = 'LOG_'
 class LogConfig(BaseConfig):
     """日志配置."""
 
-    model_config = SettingsConfigDict(env_prefix=ENV_PREFIX)
+    model_config = SettingsConfigDict(env_prefix=ENV_PREFIX, validate_default=True)
 
     # 日志级别
     level: LogLevel = Field(
@@ -31,7 +31,7 @@ class LogConfig(BaseConfig):
 
     # 日志输出
     output: str = Field(
-        default='console',
+        default='both',
         description='日志输出(console/file/both)',
     )
 

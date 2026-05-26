@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         case_sensitive=False,
-        extra='ignore',
+        extra='forbid',
         validate_default=True,
         env_prefix=ENV_PREFIX,
         env_nested_delimiter='_',
@@ -215,11 +215,13 @@ def get_settings(
     if file_path is not None:
         return load_settings(file_path)
 
-    with _settings_lock:
-        settings = _current_settings
-        if settings is None:
-            settings = Settings()
-            _current_settings = settings
+    # 双重检查锁定: 多数调用直接返回缓存, 避免锁竞争
+    settings = _current_settings
+    if settings is None:
+        with _settings_lock:
+            if _current_settings is None:
+                _current_settings = Settings()
+            settings = _current_settings
 
     return settings
 

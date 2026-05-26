@@ -14,63 +14,70 @@ from {{ package_slug }}.core.constants import LogLevel
 
 
 class TestGlobalOptions:
-    """测试 GlobalOptions 模型."""
+    """测试 GlobalOptions 模型 — 现代化版本 (无 verbose/quiet bool 字段)."""
 
     def test_create_default(self) -> None:
         opts = GlobalOptions(
             config_file=None,
             log_file=None,
             msg_level=LogLevel.INFO,
-            verbose=False,
-            quiet=False,
         )
         assert opts.msg_level == LogLevel.INFO
-        assert opts.verbose is False
-        assert opts.quiet is False
 
     def test_model_is_frozen(self) -> None:
         opts = GlobalOptions(
             config_file=None,
             log_file=None,
             msg_level=LogLevel.INFO,
-            verbose=False,
-            quiet=False,
         )
         with pytest.raises(pydantic.ValidationError):
-            opts.verbose = True  # type: ignore[misc]
+            opts.msg_level = LogLevel.DEBUG  # type: ignore[misc]
 
     def test_extra_fields_forbidden(self) -> None:
         with pytest.raises(pydantic.ValidationError):
-            kwargs: dict[str, object] = {
-                'config_file': None,
-                'log_file': None,
-                'msg_level': LogLevel.INFO,
-                'verbose': False,
-                'quiet': False,
-                'unknown_field': 'not allowed',
-            }
-            GlobalOptions(**kwargs)  # type: ignore[arg-type]
+            GlobalOptions(
+                config_file=None,
+                log_file=None,
+                msg_level=LogLevel.INFO,
+                unknown_field='not allowed',  # type: ignore[call-arg]
+            )
+
+    def test_verbose_quiet_not_accepted(self) -> None:
+        """验证 verbose/quiet 已从模型中移除."""
+        with pytest.raises(pydantic.ValidationError):
+            GlobalOptions(
+                config_file=None,
+                log_file=None,
+                msg_level=LogLevel.INFO,
+                verbose=True,  # type: ignore[call-arg]
+            )
 
 
 class TestResolveLogLevel:
-    """测试 _resolve_log_level 纯函数."""
+    """测试 _resolve_log_level 计数模式 (verbose: int, quiet: int)."""
 
     @pytest.mark.parametrize(
-        'verbose,quiet,cli_level,expected',
+        'verbose_count,quiet_count,expected',
         [
-            (True, False, LogLevel.INFO, LogLevel.DEBUG),
-            (False, True, LogLevel.INFO, LogLevel.ERROR),
-            (False, False, LogLevel.INFO, LogLevel.INFO),
-            (False, False, LogLevel.DEBUG, LogLevel.DEBUG),
-            (False, False, LogLevel.WARNING, LogLevel.WARNING),
-            (True, True, LogLevel.INFO, LogLevel.DEBUG),
+            # 默认: INFO
+            (0, 0, LogLevel.INFO),
+            # -v → DEBUG
+            (1, 0, LogLevel.DEBUG),
+            (2, 0, LogLevel.DEBUG),
+            # -q → WARNING
+            (0, 1, LogLevel.WARNING),
+            # -qq → ERROR
+            (0, 2, LogLevel.ERROR),
+            (0, 3, LogLevel.ERROR),
+            # -q 优先级高于 -v
+            (1, 1, LogLevel.WARNING),
+            (2, 1, LogLevel.WARNING),
         ],
     )
     def test_resolve(
         self,
-        verbose: bool,
-        quiet: bool,
-        cli_level: LogLevel,
+        verbose_count: int,
+        quiet_count: int,
         expected: LogLevel,
     ) -> None:
-        assert _resolve_log_level(verbose, quiet, cli_level) == expected
+        assert _resolve_log_level(verbose_count, quiet_count) == expected

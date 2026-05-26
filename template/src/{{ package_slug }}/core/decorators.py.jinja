@@ -16,7 +16,7 @@ T = TypeVar('T')
 
 
 def log_command(cmd_name: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    """标准日志装饰器."""
+    """命令执行日志装饰器 (INFO 级别, 始终记录)."""
     log = get_logger()
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
@@ -24,9 +24,15 @@ def log_command(cmd_name: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             params = []
             if args:
-                params.extend(str(a) for a in args)
+                params.extend(
+                    str(a) for a in args
+                    if not isinstance(a, typer.Context)
+                )
             if kwargs:
-                params.extend(f'{k}={v}' for k, v in kwargs.items())
+                params.extend(
+                    f'{k}={v}' for k, v in kwargs.items()
+                    if k != 'ctx'
+                )
             params_str = ', '.join(params) if params else '(无)'
             log.info(f'执行命令: {cmd_name} | {params_str}')
             return func(*args, **kwargs)
@@ -37,7 +43,7 @@ def log_command(cmd_name: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
 
 
 def handle_errors[**P, T](func: Callable[P, T]) -> Callable[P, T]:
-    """统一错误处理装饰器."""
+    """统一错误处理装饰器 — 异常转为用户友好的退出信息."""
     log = get_logger()
 
     @wraps(func)

@@ -14,21 +14,67 @@ from {{ package_slug }}.core.config.settings import clear_settings
 
 @pytest.fixture
 def tmp_config_file(tmp_path: Path) -> Path:
-    """在临时目录创建最小 TOML 配置文件."""
-    data = {
-        'app': {'name': 'test-app'},
-        'env': {'environment': 'development', 'debug': False},
-        'log': {'level': 'INFO'},
-        'db': {
-            'type': 'sqlite',
-            'host': 'localhost',
-            'port': 5432,
-            'username': 'test',
-            'password': 'test_password',
-            'database': 'test_db',
-        },
-    }
+    """在临时目录创建最小有效 TOML 配置文件."""
+    data = dict(
+        app=dict(name='test-app', version='0.1.0', description='test'),
+        env=dict(environment='development', debug=False),
+        log=dict(
+            level='INFO',
+            format='json',
+            output='console',
+            dir_name='logs',
+            file_name='app.log',
+            max_bytes=10485760,
+            backup_count=5,
+        ),
+        db=dict(
+            type='sqlite',
+            host='localhost',
+            port=5432,
+            username='test',
+            password='password',
+            database='test_db',
+            pool_size=20,
+            max_overflow=10,
+            pool_timeout=30,
+            pool_recycle=3600,
+        ),
+    )
     path = tmp_path / 'test_config.toml'
+    with open(path, 'wb') as f:
+        tomli_w.dump(data, f)
+    return path
+
+
+@pytest.fixture
+def full_config_file(tmp_path: Path) -> Path:
+    """在临时目录创建完整的 TOML 配置文件 (含所有字段)."""
+    data = dict(
+        app=dict(name='full-app', version='2.0.0', description='full config'),
+        env=dict(environment='staging', debug=True),
+        log=dict(
+            level='DEBUG',
+            format='text',
+            output='both',
+            dir_name='logs',
+            file_name='full.log',
+            max_bytes=5242880,
+            backup_count=10,
+        ),
+        db=dict(
+            type='postgresql',
+            host='db.example.com',
+            port=5432,
+            username='admin',
+            password='secret123',
+            database='prod_db',
+            pool_size=50,
+            max_overflow=20,
+            pool_timeout=60,
+            pool_recycle=1800,
+        ),
+    )
+    path = tmp_path / 'full_config.toml'
     with open(path, 'wb') as f:
         tomli_w.dump(data, f)
     return path

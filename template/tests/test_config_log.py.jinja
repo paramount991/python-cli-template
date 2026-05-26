@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+# Copyright (c) {{ author_name }}
+# All rights reserved.
+"""测试 core.config.log 模块."""
+
+from {{ package_slug }}.core.config.log import LogConfig
+from {{ package_slug }}.core.constants import LogLevel
+
+
+class TestLogConfigDefaults:
+    """测试 LogConfig 默认值."""
+
+    def test_default_level_is_info(self) -> None:
+        cfg = LogConfig()
+        assert cfg.level == LogLevel.INFO
+
+    def test_default_format_is_json(self) -> None:
+        cfg = LogConfig()
+        assert cfg.format == 'json'
+
+    def test_default_output_is_both(self) -> None:
+        cfg = LogConfig()
+        assert cfg.output == 'both'
+
+    def test_default_dir_and_file_names(self) -> None:
+        cfg = LogConfig()
+        assert cfg.dir_name == 'logs'
+        assert cfg.file_name == 'app.log'
+
+    def test_default_max_bytes(self) -> None:
+        cfg = LogConfig()
+        assert cfg.max_bytes == 10 * 1024 * 1024
+
+    def test_default_backup_count(self) -> None:
+        cfg = LogConfig()
+        assert cfg.backup_count == 5
+
+
+class TestLogConfigCustom:
+    """测试 LogConfig 自定义值."""
+
+    def test_custom_level(self) -> None:
+        cfg = LogConfig(level=LogLevel.DEBUG)
+        assert cfg.level == LogLevel.DEBUG
+
+    def test_text_format(self) -> None:
+        cfg = LogConfig(format='text')
+        assert cfg.format == 'text'
+
+    def test_console_only_output(self) -> None:
+        cfg = LogConfig(output='console')
+        assert cfg.output == 'console'
+
+    def test_file_only_output(self) -> None:
+        cfg = LogConfig(output='file')
+        assert cfg.output == 'file'
+
+    def test_custom_max_bytes(self) -> None:
+        cfg = LogConfig(max_bytes=5242880)
+        assert cfg.max_bytes == 5242880

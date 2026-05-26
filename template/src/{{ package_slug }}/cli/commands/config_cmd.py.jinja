@@ -18,6 +18,7 @@ from {{ package_slug }}.core.config.serializer import (
     save_default_config,
 )
 from {{ package_slug }}.core.config.settings import Settings, load_settings
+from {{ package_slug }}.core.decorators import handle_errors, log_command
 from {{ package_slug }}.core.log import get_logger
 
 _audit_log = get_logger('config')
@@ -29,6 +30,8 @@ app = typer.Typer(
 
 
 @app.command('init', help='写入默认配置到配置文件')
+@handle_errors
+@log_command('config.init')
 def init_config(
     ctx: typer.Context,
     force: bool = typer.Option(False, '--force', '-f', help='覆盖写入配置文件'),
@@ -36,12 +39,16 @@ def init_config(
     """写入默认配置到配置文件."""
     config_path = _resolved_config_path(ctx)
     _check_overwrite(config_path, force)
-    typer.echo(f'初始化配置文件{config_path}...')
+    _audit_log.debug('config.init: 写入默认配置到 %s', config_path)
+    typer.echo(f'初始化配置文件 {config_path}...')
     save_default_config(config_path, overwrite=True)
+    _audit_log.info('config.init: 配置初始化成功')
     typer.echo('配置文件初始化成功')
 
 
 @app.command('copy', help='复制预定义配置文件')
+@handle_errors
+@log_command('config.copy')
 def copy_config(
     ctx: typer.Context,
     force: bool = typer.Option(False, '--force', '-f', help='覆盖写入配置文件'),
@@ -52,7 +59,8 @@ def copy_config(
 
     _repo_root = _find_repo_root()
     config_src_path = _repo_root / 'install' / '{{ project_slug }}.toml'
-    typer.echo(f'复制预定义配置文件{config_src_path}到{config_path}...')
+    _audit_log.debug('config.copy: %s -> %s', config_src_path, config_path)
+    typer.echo(f'复制预定义配置文件 {config_src_path} 到 {config_path}...')
     config_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(config_src_path, config_path)
     typer.echo('配置文件复制成功')
@@ -60,6 +68,8 @@ def copy_config(
 
 @app.command('list', help='列出配置文件内容(同 show 命令)')
 @app.command('show', help='列出配置文件内容(同 list 命令)')
+@handle_errors
+@log_command('config.list')
 def list_or_show_config(
     ctx: typer.Context,
     output_format: str = typer.Option(
@@ -73,6 +83,8 @@ def list_or_show_config(
 
 
 @app.command('validate', help='校验配置文件')
+@handle_errors
+@log_command('config.validate')
 def validate_config(ctx: typer.Context) -> None:
     """校验配置文件."""
     config_path = _resolved_config_path(ctx)
@@ -80,6 +92,7 @@ def validate_config(ctx: typer.Context) -> None:
         typer.secho(f'配置文件不存在: {config_path}', fg=typer.colors.RED)
         raise typer.Exit(code=1)
 
+    _audit_log.debug('config.validate: 验证 %s', config_path)
     typer.echo(f'验证配置文件 {config_path}...')
     try:
         load_settings(config_path)
@@ -90,6 +103,8 @@ def validate_config(ctx: typer.Context) -> None:
 
 
 @app.command('set', help='修改单个配置项并写回文件')
+@handle_errors
+@log_command('config.set')
 def set_config_item(
     ctx: typer.Context,
     key: str = typer.Argument(..., help='字段名,例如 database.host'),
@@ -124,6 +139,10 @@ def set_config_item(
         raise typer.Exit(code=1) from None
 
     typed_value = _coerce_value(value, type(old_value))
+    _audit_log.debug(
+        'config.set: %s: %s -> %s (dry_run=%s)',
+        key, repr(old_value), repr(typed_value), dry_run,
+    )
     typer.echo(f'更新 {key}: {old_value} -> {typed_value}')
 
     if dry_run:
@@ -163,6 +182,8 @@ def set_config_item(
 
 
 @app.command('get', help='读取单个配置项')
+@handle_errors
+@log_command('config.get')
 def get_config_item(
     ctx: typer.Context,
     key: str = typer.Argument(..., help='字段名,例如 database.host'),
@@ -183,9 +204,12 @@ def get_config_item(
 
 
 @app.command('path', help='打印当前配置文件路径')
+@handle_errors
+@log_command('config.path')
 def get_config_path(ctx: typer.Context) -> None:
     """打印当前配置文件路径."""
     config_path = _resolved_config_path(ctx)
+    _audit_log.debug('config.path: %s', config_path)
     typer.echo(str(config_path))
 
 
@@ -214,7 +238,7 @@ def _check_overwrite(config_path: Path, force: bool) -> None:
     """如果配置文件已存在且未强制覆盖则报错."""
     if config_path.exists() and not force:
         typer.secho(
-            f'配置文件{config_path}已存在: 使用 --force 可覆盖。',
+            f'配置文件 {config_path} 已存在: 使用 --force 可覆盖.',
             fg=typer.colors.RED,
         )
         raise typer.Exit(code=1)

@@ -71,3 +71,17 @@ class TestLogCommand:
 
         result = kw_func(a=1, b=2)
         assert result == {'a': 1, 'b': 2}
+
+    def test_ctx_kwarg_not_breaks_function(self) -> None:
+        """验证 ctx 关键字参数正常传递给函数, 仅从日志输出中过滤."""
+        @log_command('test.ctxkw')
+        def func_with_ctx(a: int, ctx: str = 'default') -> str:
+            return f'{a}-{ctx}'
+
+        # ctx 应正常传递给函数, 不影响返回值
+        result = func_with_ctx(42, ctx='myctx')
+        assert result == '42-myctx'
+
+        # 不传 ctx 时使用默认值
+        result = func_with_ctx(42)
+        assert result == '42-default'

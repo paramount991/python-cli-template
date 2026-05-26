@@ -20,8 +20,13 @@ def bootstrap_app(
     """加载配置, 注入 CLI 覆盖, 初始化日志.
 
     优先级: CLI 参数 > 环境变量 > TOML 文件 > 默认值.
+
+    若配置文件不存在 (如 config init 创建新文件), 回退到默认配置.
     """
-    cfg = load_settings(config_file)
+    if config_file is not None and not Path(config_file).exists():
+        cfg = Settings()
+    else:
+        cfg = load_settings(config_file)
 
     # CLI 参数作为最高优先级覆盖
     cfg.log.level = msg_level

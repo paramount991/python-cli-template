@@ -67,6 +67,33 @@ class TestDatabaseUrl:
         assert cfg.url == 'sqlite:///app.db'
 
 
+class TestSafeUrl:
+    """测试 safe_url 属性 — 密码脱敏."""
+
+    def test_safe_url_masks_password(self) -> None:
+        cfg = DatabaseConfig(
+            type=DatabaseType.POSTGRESQL,
+            username='admin',
+            password='secret123',
+            host='db.example.com',
+            port=5432,
+            database='mydb',
+        )
+        assert '***' in cfg.safe_url
+        assert 'secret123' not in cfg.safe_url
+
+    def test_safe_url_empty_password(self) -> None:
+        cfg = DatabaseConfig(password='')
+        assert '***' not in cfg.safe_url
+        assert ':@' in cfg.safe_url or '://' in cfg.safe_url
+
+    def test_url_contains_real_password(self) -> None:
+        """验证 url 属性仍包含真实密码 (用于数据库连接)."""
+        cfg = DatabaseConfig(password='realpass')
+        assert 'realpass' in cfg.url
+        assert 'realpass' not in cfg.safe_url
+
+
 class TestPortValidation:
     """测试端口验证器."""
 

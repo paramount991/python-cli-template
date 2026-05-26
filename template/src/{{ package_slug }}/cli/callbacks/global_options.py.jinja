@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Copyright (c) {{ author_name }}
 # All rights reserved.
-"""CLI 全局选项解析."""
+"""CLI 全局选项 — 现代化实现: -v/-q 计数模式."""
 
 import typer
 from pydantic import BaseModel, ConfigDict
@@ -19,28 +19,32 @@ class GlobalOptions(BaseModel):
     config_file: str | None
     log_file: str | None
     msg_level: const.LogLevel
-    verbose: bool
-    quiet: bool
 
 
 def _version_callback(value: bool) -> None:
-    """--version / -V 回调."""
+    """--version / -V 回调 (eager, 优先级最高)."""
     if value:
         typer.echo(f'{const.PROJECT_DESC} V{const.PROJECT_VERSION}')
         raise typer.Exit()
 
 
-def _resolve_log_level(
-    verbose: bool,
-    quiet: bool,
-    cli_level: const.LogLevel,
-) -> const.LogLevel:
-    """根据 --verbose / --quiet 覆写日志级别."""
-    if verbose:
-        return const.LogLevel.DEBUG
-    if quiet:
+def _resolve_log_level(verbose: int, quiet: int) -> const.LogLevel:
+    """根据 -v/-q 计数解析日志级别.
+
+    -q / --quiet 可叠加:
+      -q       → WARNING (隐藏 INFO/DEBUG)
+      -q -q    → ERROR   (仅显示错误)
+
+    -v / --verbose 可叠加:
+      -v       → DEBUG   (显示所有)
+    """
+    if quiet >= 2:
         return const.LogLevel.ERROR
-    return cli_level
+    if quiet >= 1:
+        return const.LogLevel.WARNING
+    if verbose >= 1:
+        return const.LogLevel.DEBUG
+    return const.LogLevel.INFO
 
 
 def global_options(
@@ -59,22 +63,21 @@ def global_options(
         help='日志文件',
         rich_help_panel='全局选项',
     ),
-    msg_level: const.LogLevel = typer.Option(
-        const.LogLevel.INFO,
-        '--msglevel',
-        '-m',
-        metavar='LEVEL',
-        help='日志级别',
-        rich_help_panel='全局选项',
-    ),
-    verbose: bool = typer.Option(
-        False,
+    verbose: int = typer.Option(
+        0,
         '--verbose',
-        help='详细日志',
+        '-v',
+        count=True,
+        help='详细输出 (-v for DEBUG)',
         rich_help_panel='全局选项',
     ),
-    quiet: bool = typer.Option(
-        False, '--quiet', help='安静模式', rich_help_panel='全局选项'
+    quiet: int = typer.Option(
+        0,
+        '--quiet',
+        '-q',
+        count=True,
+        help='安静模式 (-q for WARN, -qq for ERROR)',
+        rich_help_panel='全局选项',
     ),
     version: bool = typer.Option(
         None,
@@ -87,7 +90,7 @@ def global_options(
     ),
 ) -> None:
     """全局选项回调: 解析参数, 存入上下文, 按需启动应用."""
-    msg_level = _resolve_log_level(verbose, quiet, msg_level)
+    msg_level = _resolve_log_level(verbose, quiet)
 
     # 解析配置路径: 仅当文件存在或用户显式指定时才加载
     resolved_config: str | None = config_file
@@ -100,8 +103,6 @@ def global_options(
         config_file=resolved_config,
         log_file=log_file,
         msg_level=msg_level,
-        verbose=verbose,
-        quiet=quiet,
     )
 
     sub_command = ctx.invoked_subcommand
@@ -109,11 +110,8 @@ def global_options(
         typer.echo('请使用子命令 help 查看帮助')
         raise typer.Exit()
 
-    # 无需加载完整配置的子命令. 新增无需配置的命令时, 加入此集合.
-    if sub_command not in ('config', 'version'):
-        typer.echo(f'加载配置文件 {resolved_config or "(使用默认配置)"}')
-        bootstrap_app(
-            config_file=resolved_config,
-            msg_level=msg_level,
-            log_file=log_file,
-        )
+    bootstrap_app(
+        config_file=resolved_config,
+        msg_level=msg_level,
+        log_file=log_file,
+    )
