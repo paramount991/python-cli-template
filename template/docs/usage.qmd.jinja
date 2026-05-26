@@ -145,12 +145,12 @@ pool_recycle = 3600
 环境变量可覆盖 TOML 配置，CLI 参数优先级最高：
 
 ```
-CLI 参数 > 环境变量 (RegModel_*) > .env > TOML 文件 > 默认值
+CLI 参数 > 环境变量 ({{ package_slug | upper }}_*) > .env > TOML 文件 > 默认值
 ```
 
 环境变量示例：
 
 ```bash
-export RegModel_env_environment=production
-export RegModel_db_host=db.example.com
+export {{ package_slug | upper }}_env_environment=production
+export {{ package_slug | upper }}_db_host=db.example.com
 ```

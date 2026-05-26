@@ -5,20 +5,19 @@ subtitle: {{ project_description }}
 
 ## 简介
 
-`{{ project_slug }}` 是一个回归建模 CLI 工具，覆盖数据管理、特征工程、模型训练、评估、预测、部署及可视化的完整生命周期。
+`{{ project_slug }}` {{ project_description }}，基于 Typer + pydantic-settings + structlog 构建，开箱即用。
 
 ## 核心特性
 
-| 模块 | 状态 | 说明 |
-|------|------|------|
-| **数据管理** | 已规划 | 获取、验证、拆分、清洗、描述、预处理、导出 |
-| **特征工程** | 规划中 | 特征选择、变换、编码 |
-| **模型训练** | 规划中 | 线性回归、正则化、集成方法 |
-| **模型评估** | 规划中 | 指标计算、交叉验证、残差分析 |
-| **预测** | 规划中 | 批量预测、实时推理 |
-| **部署** | 规划中 | 模型序列化、API 服务 |
-| **可视化** | 规划中 | 回归图、残差图、特征重要性 |
-
+| 特性 | 说明 |
+|------|------|
+| **多级 CLI** | Typer 子命令、全局选项、自动 help |
+| **配置管理** | TOML 配置文件，环境变量覆盖，pydantic 校验 |
+| **结构化日志** | structlog 控制台彩色输出 + 文件 JSON 轮转 |
+| **代码质量** | ruff 检查，开箱即用 |
+| **测试覆盖** | pytest，覆盖配置、装饰器、全局选项 |
+{% if with_example %}| **示例模块** | `{{ example_name }}` 模块，可自行替换为实际业务逻辑 |
+{% endif %}
 ## 快速开始
 
 ```bash
@@ -30,19 +29,27 @@ uv pip install -e .
 
 # 初始化配置
 {{ project_slug }} config init
-
+{% if with_example %}
 # 运行示例业务命令
 {{ project_slug }} {{ example_name }} process --help
+{% endif %}
 ```
 
 ## 项目架构
 
 ```
-{{ project_slug }}
-├── config           配置文件管理
-├── {{ example_name }}          示例业务模块
-├── version          版本信息
-└── (更多子命令陆续开放...)
+{{ project_slug }}/
+├── src/{{ package_slug }}/
+│   ├── cli/              # CLI 命令层
+│   │   ├── commands/     # 子命令
+│   │   └── callbacks/    # 回调（bootstrap、全局选项）
+│   ├── core/             # 核心模块
+│   │   └── config/       # 配置管理
+{% if with_example %}│   └── {{ example_name }}/             # 示例业务模块
+{% endif %}├── tests/                  # pytest 测试
+├── docs/                   # Quarto 文档
+├── pyproject.toml
+└── ruff.toml
 ```
 
 ## 文档导航
