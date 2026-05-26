@@ -1,0 +1,215 @@
+#!/usr/bin/env python
+# Copyright (c) {{ author_name }}
+# All rights reserved.
+"""CLI 集成测试 — 使用 Typer CliRunner 端到端测试命令."""
+
+from pathlib import Path
+
+import pytest
+import tomli_w
+from typer.testing import CliRunner
+
+from {{ package_slug }}.cli.app import app
+from {{ package_slug }}.core.config.settings import clear_settings
+
+runner = CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def _reset() -> None:
+    """每个测试后清理 Settings 缓存."""
+    yield
+    clear_settings()
+
+
+class TestVersionCommand:
+    """测试 version 子命令."""
+
+    def test_version_output(self) -> None:
+        result = runner.invoke(app, ['version'])
+        assert result.exit_code == 0
+        assert 'V' in result.stdout
+
+
+class TestConfigInit:
+    """测试 config init 命令."""
+
+    def test_init_creates_file(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'test_config.toml'
+        result = runner.invoke(app, ['--config', str(config_path), 'config', 'init'])
+        assert result.exit_code == 0
+        assert config_path.exists()
+
+    def test_init_detects_existing_file(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'test_config.toml'
+        config_path.write_text('[app]\nname = "existing"')
+        result = runner.invoke(app, ['--config', str(config_path), 'config', 'init'])
+        assert result.exit_code == 1
+
+    def test_init_force_overwrites(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'test_config.toml'
+        config_path.write_text('[app]\nname = "existing"')
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'init', '--force']
+        )
+        assert result.exit_code == 0
+
+
+class TestConfigValidate:
+    """测试 config validate 命令."""
+
+    def test_validate_valid_config(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'valid.toml'
+        data = {
+            'app': {'name': 'test'},
+            'env': {'environment': 'development', 'debug': False},
+            'log': {'level': 'INFO'},
+            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                   'username': 'test', 'password': '', 'database': 'test'},
+        }
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(app, ['--config', str(config_path), 'config', 'validate'])
+        assert result.exit_code == 0
+
+    def test_validate_missing_file(self) -> None:
+        result = runner.invoke(app, ['--config', '/nonexistent/path.toml', 'config', 'validate'])
+        assert result.exit_code == 1
+
+    def test_validate_invalid_config(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'invalid.toml'
+        config_path.write_text('[app]\nname = 123\n[env]\nenvironment = "invalid_env"')
+        result = runner.invoke(app, ['--config', str(config_path), 'config', 'validate'])
+        assert result.exit_code == 1
+
+
+class TestConfigSet:
+    """测试 config set 命令."""
+
+    def test_set_valid_value(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = {
+            'app': {'name': 'test'},
+            'env': {'environment': 'development', 'debug': False},
+            'log': {'level': 'INFO'},
+            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                   'username': 'test', 'password': '', 'database': 'test'},
+        }
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'set', 'log.level', 'DEBUG']
+        )
+        assert result.exit_code == 0
+        assert 'DEBUG' in config_path.read_text()
+
+    def test_set_dry_run_no_write(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = {
+            'app': {'name': 'test'},
+            'env': {'environment': 'development', 'debug': False},
+            'log': {'level': 'INFO'},
+            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                   'username': 'test', 'password': '', 'database': 'test'},
+        }
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        original = config_path.read_text()
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'set', 'log.level', 'DEBUG', '--dry-run']
+        )
+        assert result.exit_code == 0
+        assert '[dry-run]' in result.stdout
+        assert config_path.read_text() == original
+
+    def test_set_invalid_key(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = {
+            'app': {'name': 'test'},
+            'env': {'environment': 'development', 'debug': False},
+            'log': {'level': 'INFO'},
+            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                   'username': 'test', 'password': '', 'database': 'test'},
+        }
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'set', 'nonexistent.field', 'value']
+        )
+        assert result.exit_code == 1
+
+
+class TestConfigGetList:
+    """测试 config get/list 命令."""
+
+    def test_get_existing_key(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = {
+            'app': {'name': 'test'},
+            'env': {'environment': 'development', 'debug': False},
+            'log': {'level': 'INFO'},
+            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                   'username': 'test', 'password': '', 'database': 'test'},
+        }
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'get', 'db.type']
+        )
+        assert result.exit_code == 0
+        assert 'sqlite' in result.stdout
+
+    def test_list_output(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = {
+            'app': {'name': 'test'},
+            'env': {'environment': 'development', 'debug': False},
+            'log': {'level': 'INFO'},
+            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                   'username': 'test', 'password': '', 'database': 'test'},
+        }
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'list']
+        )
+        assert result.exit_code == 0
+        assert 'test' in result.stdout
+
+    def test_list_json_output(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = {
+            'app': {'name': 'test'},
+            'env': {'environment': 'development', 'debug': False},
+            'log': {'level': 'INFO'},
+            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                   'username': 'test', 'password': '', 'database': 'test'},
+        }
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'list', '--output', 'json']
+        )
+        assert result.exit_code == 0
+        assert '"type": "sqlite"' in result.stdout
+
+
+class TestConfigPath:
+    """测试 config path 命令."""
+
+    def test_path_output(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = dict(
+            app={'name': 'test'},
+            env={'environment': 'development', 'debug': False},
+            log={'level': 'INFO'},
+            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                'username': 'test', 'password': '', 'database': 'test'},
+        )
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'path']
+        )
+        assert result.exit_code == 0
+        assert str(config_path) in result.stdout

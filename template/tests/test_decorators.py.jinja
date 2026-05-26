@@ -6,6 +6,7 @@
 from typing import Any
 
 import pytest
+import typer
 
 from {{ package_slug }}.core.decorators import handle_errors, log_command
 
@@ -27,13 +28,23 @@ class TestHandleErrors:
 
         assert my_func.__name__ == 'my_func'
 
-    def test_exception_is_raised(self) -> None:
+    def test_exception_exits_with_code_1(self) -> None:
         @handle_errors
         def failing_func() -> None:
             raise ValueError('test error')
 
-        with pytest.raises(ValueError, match='test error'):
+        with pytest.raises(typer.Exit) as exc_info:
             failing_func()
+        assert exc_info.value.exit_code == 1
+
+    def test_typer_exit_is_propagated(self) -> None:
+        @handle_errors
+        def exiting_func() -> None:
+            raise typer.Exit(code=2)
+
+        with pytest.raises(typer.Exit) as exc_info:
+            exiting_func()
+        assert exc_info.value.exit_code == 2
 
 
 class TestLogCommand:

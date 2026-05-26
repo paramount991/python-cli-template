@@ -105,8 +105,8 @@ class TestDeepMerge:
         assert result == {'a': 1, 'b': 3}
 
     def test_nested_merge(self) -> None:
-        base = {'db': {'host': 'localhost', 'port': 5432}}
-        override = {'db': {'host': 'prod.example.com'}}
+        base = dict(db=dict(host='localhost', port=5432))
+        override = dict(db=dict(host='prod.example.com'))
         result = _deep_merge(base, override)
         assert result['db']['host'] == 'prod.example.com'
         assert result['db']['port'] == 5432
@@ -133,7 +133,7 @@ class TestLoadSettingsFromToml:
     def test_load_with_override(
         self, tmp_config_file: Path, tmp_path: Path
     ) -> None:
-        override_data = {'app': {'name': 'overridden-app'}}
+        override_data = dict(app=dict(name='overridden-app'))
         override_path = tmp_path / 'override.toml'
         with open(override_path, 'wb') as f:
             tomli_w.dump(override_data, f)
