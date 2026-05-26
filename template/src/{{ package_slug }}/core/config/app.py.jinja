@@ -10,14 +10,11 @@ from {{ package_slug }}.core.constants import PROJECT_DESC, PROJECT_NAME, PROJEC
 
 from .base import BaseConfig
 
-# 环境变量前缀
-ENV_PREFIX = 'APP_'
-
 
 class AppConfig(BaseConfig):
     """应用核心配置."""
 
-    model_config = SettingsConfigDict(env_prefix=ENV_PREFIX)
+    model_config = SettingsConfigDict(env_prefix='APP_')
 
     # 应用基本信息 (环境变量: APP_NAME, APP_VERSION, APP_DESCRIPTION)
     name: str = Field(default=PROJECT_NAME, description='应用名称')

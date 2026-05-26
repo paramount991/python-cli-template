@@ -7,9 +7,10 @@ import typer
 
 from {{ package_slug }}.core import constants as const
 
-app = typer.Typer()
+app = typer.Typer(invoke_without_command=True)
 
 
-@app.command()
-def version():  # noqa: D103
-    typer.echo(f"{const.PROJECT_DESC} V{const.PROJECT_VERSION}")
+@app.callback()
+def version() -> None:
+    """显示版本信息."""
+    typer.echo(f'{const.PROJECT_DESC} V{const.PROJECT_VERSION}')

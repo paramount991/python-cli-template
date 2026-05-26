@@ -84,7 +84,6 @@ example_name:
   type: str
   help: 示例模块名称（会生成命令 + 包结构）
   default: "demo"
-  when: "{{ with_example }}"
 
 # ==============================
 # 自动排除不需要的文件

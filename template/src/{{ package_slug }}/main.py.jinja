@@ -3,9 +3,18 @@
 # All rights reserved.
 """主程序."""
 
+import contextlib
+import sys
+
 from {{ package_slug }}.cli.callbacks.help_decorator import support_help_at_end
 
 from .cli import app
+
+# 确保 Windows 控制台 UTF-8 编码, 避免中文乱码
+for _stream in (sys.stdout, sys.stderr):
+    if _stream.encoding and _stream.encoding.lower() not in ('utf-8', 'utf8'):
+        with contextlib.suppress(Exception):
+            _stream.reconfigure(encoding='utf-8')
 
 
 @support_help_at_end

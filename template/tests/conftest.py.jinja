@@ -9,9 +9,7 @@ from pathlib import Path
 import pytest
 import tomli_w
 
-from {{ package_slug }}.core.config.base import EnvironmentConfig
-from {{ package_slug }}.core.config.settings import Settings, clear_settings
-from {{ package_slug }}.core.constants import EnvironmentType
+from {{ package_slug }}.core.config.settings import clear_settings
 
 
 @pytest.fixture
@@ -34,23 +32,6 @@ def tmp_config_file(tmp_path: Path) -> Path:
     with open(path, 'wb') as f:
         tomli_w.dump(data, f)
     return path
-
-
-@pytest.fixture
-def sample_settings() -> Settings:
-    """返回默认 Settings 实例, 并确保单例干净."""
-    clear_settings()
-    return Settings()
-
-
-@pytest.fixture
-def prod_settings() -> Settings:
-    """返回生产环境 Settings."""
-    return Settings(
-        env=EnvironmentConfig(
-            environment=EnvironmentType.PRODUCTION, debug=False
-        ),
-    )
 
 
 @pytest.fixture(autouse=True)

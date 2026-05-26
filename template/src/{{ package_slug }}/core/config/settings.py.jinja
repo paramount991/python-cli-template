@@ -8,18 +8,17 @@ from typing import Any
 
 import warnings
 
-import tomli
+import tomllib
 from pydantic import Field, ValidationError, model_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
-    TomlConfigSettingsSource,
 )
 from pydantic_settings.sources import EnvSettingsSource
 
 from .app import AppConfig
-from .base import EnvironmentConfig
+from .environment import EnvironmentConfig
 from .database import DatabaseConfig
 from .log import LogConfig
 
@@ -86,7 +85,7 @@ class Settings(BaseSettings):
     def from_toml(cls, toml_path: str | Path) -> 'Settings':
         """加载 TOML 配置文件, 环境变量自动覆盖同名配置项."""
         with open(toml_path, 'rb') as f:
-            toml_data = tomli.load(f)
+            toml_data = tomllib.load(f)
         env_overrides = _read_env_overrides()
         if env_overrides:
             toml_data = _deep_merge(toml_data, env_overrides)
@@ -101,12 +100,11 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        """配置来源优先级: 代码传入 > 环境变量 > .env > TOML > secrets."""
+        """配置来源优先级: 代码传入 > 环境变量 > .env > secrets."""
         return (
             init_settings,
             env_settings,
             dotenv_settings,
-            TomlConfigSettingsSource(settings_cls),
             file_secret_settings,
         )
 
@@ -166,7 +164,7 @@ def load_settings(
         if not override_path.exists():
             raise FileNotFoundError(f'覆盖配置文件不存在: {override_path}')
         with open(override_path, 'rb') as f:
-            override_data = tomli.load(f)
+            override_data = tomllib.load(f)
         merged = _deep_merge(settings.model_dump(mode='json'), override_data)
         settings = Settings.model_validate(merged)
 

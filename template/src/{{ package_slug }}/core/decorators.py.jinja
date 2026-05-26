@@ -13,7 +13,7 @@ P = ParamSpec('P')
 T = TypeVar('T')
 
 
-def log_command(cmd_name: str):
+def log_command(cmd_name: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """标准日志装饰器."""
     log = get_logger()
 

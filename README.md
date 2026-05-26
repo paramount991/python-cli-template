@@ -12,24 +12,42 @@
 - **可选示例模块** — 自定义模块名，或完全跳过
 - **可选文档站点** — Quarto 文档，自动生成 API 参考
 
+## 前置要求
+
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/)** — Python 包管理器和项目脚手架
+- **[Git](https://git-scm.com/downloads)** — 版本控制
+- **Python >= 3.12** — uv 会在生成项目时自动下载
+
 ## 快速开始
 
 ```bash
-uvx copier copy gh:paramount991/python-cli-template my-project --trust
+uvx copier copy gh:paramount991/python-cli-template path/to/local/repository --trust
+cd path/to/local/repository
 ```
 
-Copier 会交互式询问项目名、包名等配置，确认后自动执行 `uv sync` + `ruff check`，进入目录即可开始开发。
+`--trust` 允许模板自动执行 `uv sync` 安装依赖、`ruff check --fix` 格式化代码，无需手动操作。
+
+## 更新项目
+
+模板更新后，已有项目可以同步上游改动：
+
+```bash
+cd path/to/local/repository
+uvx copier update --trust
+```
+
+Copier 会比对 `.copier-answers.yml` 中记录的模板版本，仅更新模板变动的部分，不会覆盖项目的自定义代码。更新完成后请检查 `pyproject.toml`、`ruff.toml` 是否有冲突。
 
 ## 模板变量
 
 | 变量 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `project_name` | str | `_folder_name` | 项目名称 |
+| `project_name` | str | 无（必填） | 项目名称 |
 | `project_slug` | str | 从 project_name 推导 | URL / 目录名 |
 | `package_slug` | str | 从 project_slug 推导 | Python 包名 |
 | `project_description` | str | `A modular, extensible Python CLI framework` | 项目描述 |
 | `project_version` | str | `0.1.0` | 初始版本 |
-| `python_version` | str | `3.12` | 最低 Python 版本 (3.10/3.11/3.12) |
+| `python_version` | str | `3.12` | 最低 Python 版本 |
 | `author_name` | str | `Your Name` | 作者 |
 | `author_email` | str | `your@email.com` | 作者邮箱 |
 | `github_username` | str | `your-username` | GitHub 用户名 |
@@ -59,10 +77,10 @@ my-project/
 ## 开发模板
 
 ```bash
-git clone gh:paramount991/python-cli-template
+git clone https://github.com/paramount991/python-cli-template.git
 cd python-cli-template
 
-# 修改模板文件后验证
+# 修改模板文件后验证（test-output 可替换为任意路径）
 uvx copier copy . ../test-output --trust --defaults --data "with_example=false"
 ```
 

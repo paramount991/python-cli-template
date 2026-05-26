@@ -10,13 +10,11 @@ from pathlib import Path
 from platformdirs import user_config_dir
 
 __version__ = '{{ project_version }}'
-__project_name__ = '{{ project_slug }}'
-
 
 # 软件包名称
 PACKAGE_NAME = '{{ package_slug }}'
 # 项目名称
-PROJECT_NAME = __project_name__
+PROJECT_NAME = '{{ project_slug }}'
 # 项目描述
 PROJECT_DESC = '{{ project_description }}'
 # 包根目录 (src/{{ package_slug }})
@@ -55,7 +53,7 @@ class DatabaseType(StrEnum):
     SQLITE = 'sqlite'
 
 
-# 日志级别
+# 配置类型
 class ConfigType(StrEnum):
     """配置类型."""
 

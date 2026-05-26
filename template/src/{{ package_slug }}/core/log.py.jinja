@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import sys
 from logging.handlers import TimedRotatingFileHandler
@@ -26,7 +27,7 @@ def init_logging(config: dict[str, Any]) -> None:
     - 保留 backup_count 天历史日志
 
     Args:
-        config: 日志级别
+        config: 日志配置字典, 可包含 level (日志级别)、file_path (日志文件路径)、backup_count (保留天数)
 
     """
     global _INITIALIZED
@@ -34,7 +35,6 @@ def init_logging(config: dict[str, Any]) -> None:
         return
 
     level: str = config.get('level', 'INFO')
-    # json: bool = config.get('json', False)
     log_file: str | Path | None = config.get('file_path')
     backup_count: int = config.get('backup_count', 5)
     log_level = getattr(logging, level.upper(), logging.INFO)
@@ -128,6 +128,4 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
 
 def _json_dumps_utf8(obj, **kwargs) -> str:
     """将对象序列化为 UTF-8 编码的 JSON 字符串."""
-    import json
-
     return json.dumps(obj, ensure_ascii=False, **kwargs)
