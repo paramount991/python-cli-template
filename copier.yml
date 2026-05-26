@@ -5,7 +5,7 @@ _subdirectory: template
 
 _tasks:
   - "uv sync"
-  - "uv run ruff check ."
+  - "uv run ruff check --fix ."
 
 _message_after_update: "更新完成。请检查 pyproject.toml、ruff.toml 是否有冲突，然后运行 uv sync && uv run ruff check ."
 
@@ -44,8 +44,6 @@ python_version:
   help: 最低 Python 版本
   choices:
     - "3.12"
-    - "3.11"
-    - "3.10"
   default: "3.12"
 
 author_name:
@@ -97,7 +95,5 @@ _exclude:
   - "{% if not with_example %}src/{{ package_slug }}/cli/commands/{{ example_name }}_cmd.py{% endif %}"
   # 文档
   - "{% if not with_docs %}docs/{% endif %}"
-  - "{% if not with_docs %}*.qmd{% endif %}"
-  - "{% if not with_docs %}quarto.yml{% endif %}"
   # 测试
   - "{% if not with_tests %}tests/{% endif %}"
