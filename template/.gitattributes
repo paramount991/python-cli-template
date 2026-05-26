@@ -1,0 +1,10 @@
+# Git 属性: 统一行尾和 diff 行为
+* text=auto eol=lf
+*.py text diff=python
+*.toml text
+*.yml text
+*.yaml text
+*.md text
+*.qmd text
+*.jinja text
+*.lock binary
