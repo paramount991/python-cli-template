@@ -3,6 +3,7 @@
 # All rights reserved.
 """config: 配置文件管理子命令."""
 
+import json
 import shutil
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,9 @@ import typer
 
 from {{ package_slug }}.cli.callbacks.global_options import GlobalOptions
 from {{ package_slug }}.core import constants as const
+from {{ package_slug }}.core.log import get_logger
+
+_audit_log = get_logger('config')
 from {{ package_slug }}.core.config.serializer import (
     save_default_config,
 )
@@ -46,7 +50,7 @@ def copy_config(
     config_path = _resolved_config_path(ctx)
     _check_overwrite(config_path, force)
 
-    _repo_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+    _repo_root = _find_repo_root()
     config_src_path = _repo_root / 'install' / '{{ project_slug }}.toml'
     typer.echo(f'复制预定义配置文件{config_src_path}到{config_path}...')
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -56,10 +60,16 @@ def copy_config(
 
 @app.command('list', help='列出配置文件内容(同 show 命令)')
 @app.command('show', help='列出配置文件内容(同 list 命令)')
-def list_or_show_config(ctx: typer.Context) -> None:
+def list_or_show_config(
+    ctx: typer.Context,
+    output_format: str = typer.Option(
+        'toml', '--output', '-o',
+        help='输出格式 (toml / json)',
+    ),
+) -> None:
     """列出配置文件内容."""
     config_path = _resolved_config_path(ctx)
-    _list_or_show(config_path)
+    _list_or_show(config_path, output_format)
 
 
 @app.command('validate', help='校验配置文件')
@@ -87,6 +97,10 @@ def set_config_item(
         ...,
         help='新值,可用 true/false、数字或带引号的字符串等字面量',
     ),
+    dry_run: bool = typer.Option(
+        False, '--dry-run', '-n',
+        help='仅预览修改内容, 不写入文件',
+    ),
 ) -> None:
     """修改单个配置项并写回文件."""
     config_path = _resolved_config_path(ctx)
@@ -110,15 +124,41 @@ def set_config_item(
         raise typer.Exit(code=1) from None
 
     typed_value = _coerce_value(value, type(old_value))
-    typer.echo(f'更新 {key} = {typed_value}')
+    typer.echo(f'更新 {key}: {old_value} -> {typed_value}')
+
+    if dry_run:
+        typer.secho('[dry-run] 未写入文件', fg=typer.colors.YELLOW)
+        raise typer.Exit()
 
     # 用 tomlkit 原地编辑 TOML 文件以保留注释和格式
-    doc = tomlkit.parse(config_path.read_text(encoding='utf-8'))
+    try:
+        doc = tomlkit.parse(config_path.read_text(encoding='utf-8'))
+    except Exception as e:
+        typer.secho(f'配置文件解析失败: {e}', fg=typer.colors.RED)
+        _audit_log.error('config.set.parse_failed', path=str(config_path), error=str(e))
+        raise typer.Exit(code=1) from None
     node = doc
     for part in parts[:-1]:
         node = node[part]
     node[field_name] = typed_value
-    config_path.write_text(tomlkit.dumps(doc), encoding='utf-8')
+
+    # 写入前校验: 确保修改后的内容能通过 Pydantic 验证
+    new_content = tomlkit.dumps(doc)
+    try:
+        load_settings(config_path, from_text=new_content)
+    except Exception as e:
+        typer.secho(f'配置校验失败: {e}', fg=typer.colors.RED)
+        _audit_log.error('config.set.validation_failed', path=str(config_path), key=key, error=str(e))
+        raise typer.Exit(code=1) from None
+
+    _audit_log.info(
+        'config.set',
+        path=str(config_path),
+        key=key,
+        old_value=repr(old_value),
+        new_value=repr(typed_value),
+    )
+    config_path.write_text(new_content, encoding='utf-8')
     typer.echo(f'配置文件 {config_path} 更新成功')
 
 
@@ -132,7 +172,7 @@ def get_config_item(
     cfg = load_settings(config_path)
 
     parts = key.split('.')
-    current: Any = cfg.model_dump()
+    current: Any = cfg.model_dump(mode='json')
     for part in parts:
         if not isinstance(current, dict) or part not in current:
             typer.secho(f'未知配置项: {key}', fg=typer.colors.RED)
@@ -147,6 +187,27 @@ def get_config_path(ctx: typer.Context) -> None:
     """打印当前配置文件路径."""
     config_path = _resolved_config_path(ctx)
     typer.echo(str(config_path))
+
+
+def _find_repo_root() -> Path:
+    """向上查找包含 install/ 目录的仓库根目录."""
+    current = Path(__file__).resolve().parent
+    seen: set[Path] = set()
+    for _ in range(10):
+        # 解析符号链接并检测循环
+        resolved = current.resolve()
+        if resolved in seen:
+            break
+        seen.add(resolved)
+        if (resolved / 'install').is_dir():
+            return resolved
+        if resolved.parent == resolved:
+            break
+        current = resolved.parent
+    raise FileNotFoundError(
+        '找不到仓库根目录 (install/ 目录)。'
+        '请确认项目以可编辑模式安装 (pip install -e .)'
+    )
 
 
 def _check_overwrite(config_path: Path, force: bool) -> None:
@@ -167,9 +228,17 @@ def _coerce_value(raw: str, target_type: type) -> Any:
     if target_type is type(None):
         return None if raw_lower in ('null', 'none', '') else raw
     if target_type is int:
-        return int(raw)
+        try:
+            return int(raw)
+        except ValueError:
+            typer.secho(f'无效的整数值: {raw}', fg=typer.colors.RED)
+            raise typer.Exit(code=1)
     if target_type is float:
-        return float(raw)
+        try:
+            return float(raw)
+        except ValueError:
+            typer.secho(f'无效的浮点数值: {raw}', fg=typer.colors.RED)
+            raise typer.Exit(code=1)
     if target_type is str:
         return raw
     return raw
@@ -184,17 +253,15 @@ def _resolved_config_path(ctx: typer.Context) -> Path:
     return const.DEFAULT_CONFIG_PATH
 
 
-def _list_or_show(config_path: Path) -> None:
-    """加载 Settings 并打印为 TOML."""
+def _list_or_show(config_path: Path, output_format: str = 'toml') -> None:
+    """加载 Settings 并以指定格式打印."""
     if not config_path.exists():
         typer.secho(f'配置文件不存在: {config_path}', fg=typer.colors.YELLOW)
         raise typer.Exit(code=1)
 
     cfg = load_settings(config_path)
-    _print_as_toml(cfg)
-
-
-def _print_as_toml(cfg: Settings) -> None:
-    """将 Settings 序列化为 TOML 文本输出."""
     data = cfg.model_dump(mode='json', exclude_none=True)
-    typer.echo(tomli_w.dumps(data).rstrip())
+    if output_format == 'json':
+        typer.echo(json.dumps(data, ensure_ascii=False, indent=2))
+    else:
+        typer.echo(tomli_w.dumps(data).rstrip())

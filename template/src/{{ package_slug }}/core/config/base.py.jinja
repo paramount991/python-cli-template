@@ -11,7 +11,7 @@ class BaseConfig(BaseSettings):
 
     model_config = SettingsConfigDict(
         case_sensitive=False,
-        extra='ignore',
+        extra='forbid',
         validate_default=False,
         arbitrary_types_allowed=True,
         populate_by_name=True,

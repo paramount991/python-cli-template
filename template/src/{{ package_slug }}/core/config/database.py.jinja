@@ -42,11 +42,24 @@ class DatabaseConfig(BaseConfig):
     # 连接 URL
     @property
     def url(self) -> str:
-        """获取数据库连接URL."""
+        """获取数据库连接URL (含密码, 仅用于数据库驱动)."""
         if self.type == DatabaseType.POSTGRESQL:
             return f'postgresql://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}'
         elif self.type == DatabaseType.MYSQL:
             return f'mysql://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}'
+        elif self.type == DatabaseType.SQLITE:
+            return f'sqlite:///{self.database}.db'
+        else:
+            raise ValueError(f'Unsupported database type: {self.type}')
+
+    @property
+    def safe_url(self) -> str:
+        """获取数据库连接URL (密码脱敏, 可用于日志输出)."""
+        pw = '***' if self.password else ''
+        if self.type == DatabaseType.POSTGRESQL:
+            return f'postgresql://{self.username}:{pw}@{self.host}:{self.port}/{self.database}'
+        elif self.type == DatabaseType.MYSQL:
+            return f'mysql://{self.username}:{pw}@{self.host}:{self.port}/{self.database}'
         elif self.type == DatabaseType.SQLITE:
             return f'sqlite:///{self.database}.db'
         else:

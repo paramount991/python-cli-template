@@ -22,6 +22,7 @@ project_slug:
   type: str
   help: 项目短名（URL / 文件夹使用）
   default: "{{ project_name | replace(' ', '-') }}"
+  validator: "{% if project_slug and ('/' in project_slug or '..' in project_slug) %}project_slug 不能包含路径分隔符或 '..'{% endif %}"
 
 package_slug:
   type: str
@@ -84,6 +85,7 @@ example_name:
   type: str
   help: 示例模块名称（会生成命令 + 包结构）
   default: "demo"
+  when: "{{ with_example }}"
 
 # ==============================
 # 自动排除不需要的文件

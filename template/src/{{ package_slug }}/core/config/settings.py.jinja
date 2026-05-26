@@ -3,6 +3,7 @@
 # All rights reserved.
 """配置文件管理-主配置类."""
 
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -25,8 +26,12 @@ from .log import LogConfig
 # 环境变量前缀
 ENV_PREFIX = '{{ package_slug | upper }}_'
 
-# 模块级单例缓存
+# TOML 文件最大大小 (10 MB)
+MAX_CONFIG_SIZE = 10 * 1024 * 1024
+
+# 模块级单例缓存及线程锁
 _current_settings: 'Settings | None' = None
+_settings_lock = threading.Lock()
 
 
 class Settings(BaseSettings):
@@ -38,6 +43,8 @@ class Settings(BaseSettings):
         validate_default=True,
         env_prefix=ENV_PREFIX,
         env_nested_delimiter='_',
+        env_file='.env',
+        env_file_encoding='utf-8',
     )
 
     app: AppConfig = Field(default_factory=AppConfig, description='应用配置')
@@ -84,11 +91,23 @@ class Settings(BaseSettings):
     @classmethod
     def from_toml(cls, toml_path: str | Path) -> 'Settings':
         """加载 TOML 配置文件, 环境变量自动覆盖同名配置项."""
+        toml_path = Path(toml_path)
+        if toml_path.stat().st_size > MAX_CONFIG_SIZE:
+            raise ValueError(
+                f'配置文件过大 ({toml_path.stat().st_size} bytes), '
+                f'上限为 {MAX_CONFIG_SIZE} bytes'
+            )
         with open(toml_path, 'rb') as f:
             toml_data = tomllib.load(f)
         env_overrides = _read_env_overrides()
         if env_overrides:
             toml_data = _deep_merge(toml_data, env_overrides)
+        return cls.model_validate(toml_data)
+
+    @classmethod
+    def from_toml_text(cls, text: str) -> 'Settings':
+        """从 TOML 文本解析配置 (用于写入前校验)."""
+        toml_data = tomllib.loads(text)
         return cls.model_validate(toml_data)
 
     @classmethod
@@ -137,16 +156,26 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
 def load_settings(
     file_path: str | Path | None = None,
     override_path: str | Path | None = None,
+    from_text: str | None = None,
 ) -> Settings:
     """从配置文件加载设置, 并缓存为当前激活配置.
 
     Args:
         file_path: 基础配置文件路径, None 则使用默认值.
         override_path: 覆盖配置文件, 深度合并到基础配置之上 (如 dev/prod 覆盖).
+        from_text: 直接解析 TOML 文本 (用于写入前校验), 与 file_path 互斥.
     """
     global _current_settings
 
-    if file_path is None:
+    if from_text is not None:
+        # 仅校验, 不写入缓存
+        try:
+            return Settings.from_toml_text(from_text)
+        except ValidationError as e:
+            raise ValueError(f'配置校验错误: {e}') from e
+        except Exception as e:
+            raise ValueError(f'配置解析错误: {e}') from e
+    elif file_path is None:
         settings: Settings = Settings()
     else:
         file_path = Path(file_path)
@@ -168,7 +197,8 @@ def load_settings(
         merged = _deep_merge(settings.model_dump(mode='json'), override_data)
         settings = Settings.model_validate(merged)
 
-    _current_settings = settings
+    with _settings_lock:
+        _current_settings = settings
     return settings
 
 
@@ -185,10 +215,11 @@ def get_settings(
     if file_path is not None:
         return load_settings(file_path)
 
-    settings = _current_settings
-    if settings is None:
-        settings = Settings()
-        _current_settings = settings
+    with _settings_lock:
+        settings = _current_settings
+        if settings is None:
+            settings = Settings()
+            _current_settings = settings
 
     return settings
 
@@ -196,4 +227,5 @@ def get_settings(
 def clear_settings() -> None:
     """清除配置缓存, 下次调用 get_settings 将重新创建."""
     global _current_settings
-    _current_settings = None
+    with _settings_lock:
+        _current_settings = None
