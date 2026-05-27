@@ -193,10 +193,11 @@ def get_config_item(
     cfg = load_settings(config_path)
 
     parts = key.split('.')
-    current: Any = cfg.model_dump(mode='json')
+    current: Any = cfg.dict_without_sensitive()
     for part in parts:
         if not isinstance(current, dict) or part not in current:
             typer.secho(f'未知配置项: {key}', fg=typer.colors.RED)
+            typer.secho("使用 'config list' 查看所有配置项", fg=typer.colors.YELLOW)
             raise typer.Exit(code=1)
         current = current[part]
 
@@ -234,7 +235,7 @@ def _find_repo_root() -> Path:
             break
         current = resolved.parent
     raise FileNotFoundError(
-        '找不到仓库根目录 (install/ 目录)。'
+        '找不到仓库根目录 (install/ 目录)。config copy 命令仅适用于开发环境。'
         '请确认项目以可编辑模式安装 (pip install -e .)'
     )
 
@@ -259,9 +260,9 @@ def _coerce_value(raw: str, target_type: type) -> Any:
             return False
         typer.secho(
             f'无效的布尔值: {raw!r}, 请使用 true/false/1/0/yes/no/on/off',
-            fg=typer.colors.YELLOW,
+            fg=typer.colors.RED,
         )
-        return False
+        raise typer.Exit(code=1)
     if target_type is type(None):
         return None if raw_lower in ('null', 'none', '') else raw
     if target_type is int:
@@ -296,8 +297,16 @@ def _list_or_show(config_path: Path, output_format: str = 'toml') -> None:
         typer.secho(f'配置文件不存在: {config_path}', fg=typer.colors.YELLOW)
         raise typer.Exit(code=1)
 
+    output_format = output_format.lower()
+    if output_format not in ('toml', 'json'):
+        typer.secho(
+            f'不支持的输出格式: {output_format}, 请使用 toml 或 json',
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=1)
+
     cfg = load_settings(config_path)
-    data = cfg.model_dump(mode='json', exclude_none=True)
+    data = cfg.dict_without_sensitive()
     if output_format == 'json':
         typer.echo(json.dumps(data, ensure_ascii=False, indent=2))
     else:
