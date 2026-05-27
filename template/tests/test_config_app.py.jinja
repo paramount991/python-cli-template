@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+# Copyright (c) {{ author_name }}
+# All rights reserved.
+"""测试 core.config.app 模块."""
+
+import pytest
+
+from {{ package_slug }}.core.config.app import AppConfig
+from {{ package_slug }}.core.constants import PROJECT_DESC, PROJECT_NAME, PROJECT_VERSION
+
+
+class TestAppConfigDefaults:
+    """测试 AppConfig 默认值."""
+
+    def test_default_name_matches_project_name(self) -> None:
+        cfg = AppConfig()
+        assert cfg.name == PROJECT_NAME
+
+    def test_default_version_matches_project_version(self) -> None:
+        cfg = AppConfig()
+        assert cfg.version == PROJECT_VERSION
+
+    def test_default_description_matches_project_desc(self) -> None:
+        cfg = AppConfig()
+        assert cfg.description == PROJECT_DESC
+
+
+class TestAppConfigCustom:
+    """测试 AppConfig 自定义值."""
+
+    def test_custom_name(self) -> None:
+        cfg = AppConfig(name='custom-app')
+        assert cfg.name == 'custom-app'
+
+    def test_custom_version(self) -> None:
+        cfg = AppConfig(version='2.0.0')
+        assert cfg.version == '2.0.0'
+
+    def test_custom_description(self) -> None:
+        cfg = AppConfig(description='A custom description')
+        assert cfg.description == 'A custom description'
+
+
+class TestAppConfigFromEnv:
+    """测试通过环境变量设置值 (env_prefix='APP_')."""
+
+    def test_reads_name_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv('APP_NAME', 'env-app')
+        cfg = AppConfig()
+        assert cfg.name == 'env-app'
+
+    def test_reads_version_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv('APP_VERSION', '3.0.0')
+        cfg = AppConfig()
+        assert cfg.version == '3.0.0'
+
+    def test_reads_description_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv('APP_DESCRIPTION', 'env description')
+        cfg = AppConfig()
+        assert cfg.description == 'env description'
+
+
+class TestAppConfigExtraForbid:
+    """测试 extra='forbid' 行为."""
+
+    def test_extra_fields_rejected(self) -> None:
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match='unknown_field'):
+            AppConfig(name='test', unknown_field='should_fail')

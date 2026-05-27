@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+# Copyright (c) {{ author_name }}
+# All rights reserved.
+"""测试 core.config.serializer 模块."""
+
+from pathlib import Path
+
+import pytest
+import tomllib
+
+from {{ package_slug }}.core.config.serializer import (
+    save_config_file,
+    save_default_config,
+)
+from {{ package_slug }}.core.config.settings import clear_settings
+from {{ package_slug }}.core.constants import ConfigType
+
+
+class TestSaveConfigFile:
+    """测试 save_config_file 函数."""
+
+    def test_creates_file_with_content(self, tmp_path: Path) -> None:
+        file_path = tmp_path / 'sub' / 'config.toml'
+        data = {'app': {'name': 'test'}, 'db': {'host': 'localhost'}}
+        save_config_file(data, file_path)
+        assert file_path.exists()
+        with open(file_path, 'rb') as f:
+            loaded = tomllib.load(f)
+        assert loaded['app']['name'] == 'test'
+        assert loaded['db']['host'] == 'localhost'
+
+    def test_creates_parent_directories(self, tmp_path: Path) -> None:
+        file_path = tmp_path / 'a' / 'b' / 'c' / 'config.toml'
+        save_config_file({'key': 'value'}, file_path)
+        assert file_path.parent.exists()
+        assert file_path.exists()
+
+    def test_overwrites_existing_file(self, tmp_path: Path) -> None:
+        file_path = tmp_path / 'config.toml'
+        save_config_file({'version': 1}, file_path)
+        save_config_file({'version': 2}, file_path)
+        with open(file_path, 'rb') as f:
+            loaded = tomllib.load(f)
+        assert loaded['version'] == 2
+
+
+class TestSaveDefaultConfig:
+    """测试 save_default_config 函数."""
+
+    def test_creates_default_config(self, tmp_path: Path) -> None:
+        clear_settings()
+        file_path = tmp_path / 'default.toml'
+        result = save_default_config(file_path)
+        assert result == file_path
+        assert file_path.exists()
+
+    def test_raises_if_exists_and_no_overwrite(self, tmp_path: Path) -> None:
+        file_path = tmp_path / 'default.toml'
+        file_path.write_text('')
+        with pytest.raises(FileExistsError, match='文件已存在'):
+            save_default_config(file_path)
+
+    def test_overwrites_if_flag_set(self, tmp_path: Path) -> None:
+        clear_settings()
+        file_path = tmp_path / 'default.toml'
+        file_path.write_text('')
+        result = save_default_config(file_path, overwrite=True)
+        assert result == file_path
+        assert file_path.exists()
+
+    def test_respects_file_type_parameter(self, tmp_path: Path) -> None:
+        """验证 file_type 参数被接受 (不影响输出内容)."""
+        clear_settings()
+        file_path = tmp_path / 'config.toml'
+        result = save_default_config(file_path, file_type=ConfigType.TOML)
+        assert result.suffix == '.toml'
+
+    def test_exclude_unset_produces_smaller_file(self, tmp_path: Path) -> None:
+        """验证 exclude_unset=True 生成更精简的配置文件."""
+        clear_settings()
+        full_path = tmp_path / 'full.toml'
+        save_default_config(full_path, exclude_unset=False)
+        minimal_path = tmp_path / 'minimal.toml'
+        save_default_config(minimal_path, exclude_unset=True, exclude_defaults=True)
+        assert minimal_path.stat().st_size <= full_path.stat().st_size

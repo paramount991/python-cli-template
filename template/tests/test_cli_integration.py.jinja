@@ -213,3 +213,129 @@ class TestConfigPath:
         )
         assert result.exit_code == 0
         assert str(config_path) in result.stdout
+
+    def test_path_without_config_flag(self) -> None:
+        """验证不传 --config 时打印默认路径."""
+        result = runner.invoke(app, ['config', 'path'])
+        assert result.exit_code == 0
+
+
+class TestConfigCopy:
+    """测试 config copy 命令."""
+
+    def test_copy_creates_file(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'copied.toml'
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'copy']
+        )
+        assert result.exit_code == 0
+        assert config_path.exists()
+
+    def test_copy_detects_existing_file(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'copied.toml'
+        config_path.write_text('[app]\nname = "existing"')
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'copy']
+        )
+        assert result.exit_code == 1
+
+    def test_copy_force_overwrites(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'copied.toml'
+        config_path.write_text('[app]\nname = "existing"')
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'copy', '--force']
+        )
+        assert result.exit_code == 0
+
+
+class TestConfigGet:
+    """测试 config get 命令 (补充)."""
+
+    def test_get_invalid_key(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = dict(
+            app={'name': 'test'},
+            env={'environment': 'development', 'debug': False},
+            log={'level': 'INFO'},
+            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                'username': 'test', 'password': '', 'database': 'test'},
+        )
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'get', 'nonexistent.key']
+        )
+        assert result.exit_code == 1
+
+
+class TestVersionFlag:
+    """测试 --version / -V 全局选项."""
+
+    def test_version_flag_long(self) -> None:
+        result = runner.invoke(app, ['--version'])
+        assert result.exit_code == 0
+        assert 'V' in result.stdout
+
+    def test_version_flag_short(self) -> None:
+        result = runner.invoke(app, ['-V'])
+        assert result.exit_code == 0
+        assert 'V' in result.stdout
+
+    def test_version_flag_with_subcommand_also_works(self) -> None:
+        """--version 是 eager option, 即使有子命令也应优先执行."""
+        result = runner.invoke(app, ['--version', 'config'])
+        assert result.exit_code == 0
+        assert 'V' in result.stdout
+
+
+class TestGlobalOptionsVerboseQuiet:
+    """测试 -v / -q 全局选项."""
+
+    def test_verbose_flag_accepted(self) -> None:
+        result = runner.invoke(app, ['-v', 'version'])
+        assert result.exit_code == 0
+
+    def test_quiet_flag_accepted(self) -> None:
+        result = runner.invoke(app, ['-q', 'version'])
+        assert result.exit_code == 0
+
+    def test_double_quiet_accepted(self) -> None:
+        result = runner.invoke(app, ['-qq', 'version'])
+        assert result.exit_code == 0
+
+
+class TestMainWithoutSubcommand:
+    """测试不带子命令时的行为."""
+
+    def test_no_subcommand_shows_usage(self) -> None:
+        result = runner.invoke(app, [])
+        # 无子命令时应提供帮助信息并退出
+        assert result.exit_code != 0 or '使用子命令' in result.stdout or 'help' in result.stdout
+
+    def test_help_flag_shows_usage(self) -> None:
+        result = runner.invoke(app, ['--help'])
+        assert result.exit_code == 0
+
+{% if with_example %}
+class TestDemoCommand:
+    """测试 {{ example_name }} 子命令."""
+
+    def test_demo_help(self) -> None:
+        result = runner.invoke(app, ['{{ example_name }}', '--help'])
+        assert result.exit_code == 0
+
+    def test_demo_process_help(self) -> None:
+        result = runner.invoke(app, ['{{ example_name }}', 'process', '--help'])
+        assert result.exit_code == 0
+
+    def test_demo_process_runs(self) -> None:
+        result = runner.invoke(app, ['{{ example_name }}', 'process'])
+        assert result.exit_code == 0
+
+    def test_demo_process_with_input_output(self) -> None:
+        result = runner.invoke(
+            app,
+            ['{{ example_name }}', 'process', '--input', '/tmp/test', '--output', '/tmp/out']
+        )
+        assert result.exit_code == 0
+{% endif %}

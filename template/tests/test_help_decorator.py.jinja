@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+# Copyright (c) {{ author_name }}
+# All rights reserved.
+"""测试 cli.callbacks.help_decorator 模块."""
+
+import sys
+
+from {{ package_slug }}.cli.callbacks.help_decorator import support_help_at_end
+
+
+class TestSupportHelpAtEnd:
+    """测试 support_help_at_end 装饰器."""
+
+    def test_transforms_help_to_flag(self) -> None:
+        called_with: list[str] = []
+        original_argv = sys.argv.copy()
+
+        @support_help_at_end
+        def my_cmd() -> None:
+            called_with.extend(sys.argv)
+
+        try:
+            sys.argv = ['mycmd', 'sub', 'help']
+            my_cmd()
+            assert '--help' in sys.argv
+        finally:
+            sys.argv = original_argv
+
+    def test_ignores_help_in_middle(self) -> None:
+        """验证只转换最右边的 help."""
+        original_argv = sys.argv.copy()
+
+        @support_help_at_end
+        def my_cmd() -> None:
+            pass
+
+        try:
+            sys.argv = ['mycmd', 'help', 'sub']
+            my_cmd()
+            assert sys.argv[-1] == 'sub'
+        finally:
+            sys.argv = original_argv
+
+    def test_no_help_arg_unchanged(self) -> None:
+        original_argv = sys.argv.copy()
+
+        @support_help_at_end
+        def my_cmd() -> None:
+            pass
+
+        try:
+            sys.argv = ['mycmd', 'sub']
+            my_cmd()
+            assert sys.argv == ['mycmd', 'sub']
+        finally:
+            sys.argv = original_argv
+
+    def test_help_at_end_of_many_args(self) -> None:
+        original_argv = sys.argv.copy()
+
+        @support_help_at_end
+        def my_cmd() -> None:
+            pass
+
+        try:
+            sys.argv = ['mycmd', 'a', 'b', 'c', 'help']
+            my_cmd()
+            assert sys.argv[-1] == '--help'
+            assert sys.argv[-2] == 'c'
+        finally:
+            sys.argv = original_argv
+
+    def test_preserves_function_return_value(self) -> None:
+        @support_help_at_end
+        def ok_func(x: int) -> int:
+            return x * 2
+
+        assert ok_func(21) == 42
+
+    def test_preserves_function_name_and_doc(self) -> None:
+        @support_help_at_end
+        def my_func() -> None:
+            """My docstring."""
+            pass
+
+        assert my_func.__name__ == 'my_func'
+        assert my_func.__doc__ == 'My docstring.'
