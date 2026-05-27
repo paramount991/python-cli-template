@@ -3,8 +3,6 @@
 # All rights reserved.
 """配置管理-数据库配置."""
 
-import warnings
-
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import SettingsConfigDict
 
@@ -69,11 +67,11 @@ class DatabaseConfig(BaseConfig):
     @classmethod
     def validate_port(cls, v: int, info: ValidationInfo) -> int:
         """根据数据库类型验证端口."""
+        import logging
+
         db_type = info.data.get('type')
         if db_type == DatabaseType.POSTGRESQL and v != 5432:
-            # 允许非默认端口
-            warnings.warn(f'非默认端口: {v}', stacklevel=2)
+            logging.getLogger(__name__).warning('非默认端口: %s', v)
         elif db_type == DatabaseType.MYSQL and v != 3306:
-            # 允许非默认端口
-            warnings.warn(f'非默认MySQL端口: {v}', stacklevel=2)
+            logging.getLogger(__name__).warning('非默认MySQL端口: %s', v)
         return v

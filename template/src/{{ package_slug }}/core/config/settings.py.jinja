@@ -7,8 +7,6 @@ import threading
 from pathlib import Path
 from typing import Any
 
-import warnings
-
 import tomllib
 from pydantic import Field, ValidationError, model_validator
 from pydantic_settings import (
@@ -62,7 +60,8 @@ class Settings(BaseSettings):
             if self.env.debug:
                 raise ValueError('生产环境不能启用调试模式')
             if self.db.host in ['localhost', '127.0.0.1']:
-                warnings.warn('生产环境使用本地数据库', stacklevel=2)
+                import logging
+                logging.getLogger(__name__).warning('生产环境使用本地数据库')
         return self
 
     def get_database_url(self) -> str:
@@ -95,7 +94,8 @@ class Settings(BaseSettings):
         if toml_path.stat().st_size > MAX_CONFIG_SIZE:
             raise ValueError(
                 f'配置文件过大 ({toml_path.stat().st_size} bytes), '
-                f'上限为 {MAX_CONFIG_SIZE} bytes'
+                f'上限为 {MAX_CONFIG_SIZE} bytes。'
+                '请减小配置文件大小或将配置拆分为多个文件'
             )
         with open(toml_path, 'rb') as f:
             toml_data = tomllib.load(f)
