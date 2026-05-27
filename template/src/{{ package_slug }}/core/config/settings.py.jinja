@@ -91,6 +91,10 @@ class Settings(BaseSettings):
     def from_toml(cls, toml_path: str | Path) -> 'Settings':
         """加载 TOML 配置文件, 环境变量自动覆盖同名配置项."""
         toml_path = Path(toml_path)
+        if toml_path.is_dir():
+            raise ValueError(
+                f'配置文件路径是一个目录, 请指定 .toml 文件: {toml_path}'
+            )
         if toml_path.stat().st_size > MAX_CONFIG_SIZE:
             raise ValueError(
                 f'配置文件过大 ({toml_path.stat().st_size} bytes), '

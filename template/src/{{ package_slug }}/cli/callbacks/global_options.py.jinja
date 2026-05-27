@@ -111,18 +111,22 @@ def global_options(
     if sub_command is None:
         raise typer.Exit()
 
-    # 用户显式指定了 --config 但文件不存在, 且非 config 子命令
-    if (
-        config_file is not None
-        and not Path(config_file).expanduser().resolve().exists()
-        and sub_command != 'config'
-    ):
-        typer.secho(
-            f'配置文件不存在: {config_file}',
-            fg=typer.colors.RED,
-        )
-        typer.echo("使用 'config init' 创建默认配置文件")
-        raise typer.Exit(code=1)
+    # 用户显式指定了 --config 但路径类型不对
+    if config_file is not None:
+        resolved = Path(config_file).expanduser().resolve()
+        if resolved.is_dir():
+            typer.secho(
+                f'配置文件路径是一个目录, 请指定 .toml 文件: {config_file}',
+                fg=typer.colors.RED,
+            )
+            raise typer.Exit(code=1)
+        if not resolved.exists() and sub_command != 'config':
+            typer.secho(
+                f'配置文件不存在: {config_file}',
+                fg=typer.colors.RED,
+            )
+            typer.echo("使用 'config init' 创建默认配置文件")
+            raise typer.Exit(code=1)
     # config 子命令各自检查文件是否存在, 不在此处拦截
 
     bootstrap_app(
