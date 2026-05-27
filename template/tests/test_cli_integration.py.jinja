@@ -346,7 +346,7 @@ class TestConfigPathWarning:
 class TestConfigSetBoolCoercion:
     """测试 config set 布尔值类型转换."""
 
-    def test_invalid_bool_warns(self, tmp_path: Path) -> None:
+    def test_invalid_bool_errors(self, tmp_path: Path) -> None:
         config_path = tmp_path / 'config.toml'
         data = dict(
             app={'name': 'test'},
@@ -360,7 +360,7 @@ class TestConfigSetBoolCoercion:
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'set', 'env.debug', 'ture']
         )
-        assert result.exit_code == 0  # 仍允许设置, 但有警告
+        assert result.exit_code == 1
         assert '无效的布尔值' in result.stdout
 
     def test_valid_bool_true_no_warning(self, tmp_path: Path) -> None:
@@ -396,6 +396,84 @@ class TestConfigSetBoolCoercion:
         )
         assert result.exit_code == 0
         assert '无效的布尔值' not in result.stdout
+
+
+class TestConfigShowAlias:
+    """测试 config show 别名."""
+
+    def test_show_is_alias_for_list(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = dict(
+            app={'name': 'test'},
+            env={'environment': 'development', 'debug': False},
+            log={'level': 'INFO'},
+            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                'username': 'test', 'password': '', 'database': 'test'},
+        )
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(app, ['--config', str(config_path), 'config', 'show'])
+        assert result.exit_code == 0
+        assert 'test' in result.stdout
+
+
+class TestConfigListInvalidOutput:
+    """测试 config list --output 无效格式."""
+
+    def test_invalid_output_format_errors(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = dict(
+            app={'name': 'test'},
+            env={'environment': 'development', 'debug': False},
+            log={'level': 'INFO'},
+            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                'username': 'test', 'password': '', 'database': 'test'},
+        )
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'list', '--output', 'yaml']
+        )
+        assert result.exit_code == 1
+        assert '不支持的输出格式' in result.stdout
+
+
+class TestConfigSensitiveMasking:
+    """测试 config get/list 敏感字段脱敏."""
+
+    def test_get_masks_password(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = dict(
+            app={'name': 'test'},
+            env={'environment': 'development', 'debug': False},
+            log={'level': 'INFO'},
+            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                'username': 'test', 'password': 'secret123', 'database': 'test'},
+        )
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'get', 'db.password']
+        )
+        assert result.exit_code == 0
+        assert '********' in result.stdout
+        assert 'secret123' not in result.stdout
+
+    def test_list_masks_password(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = dict(
+            app={'name': 'test'},
+            env={'environment': 'development', 'debug': False},
+            log={'level': 'INFO'},
+            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                'username': 'test', 'password': 'secret123', 'database': 'test'},
+        )
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(app, ['--config', str(config_path), 'config', 'list'])
+        assert result.exit_code == 0
+        assert '********' in result.stdout
+        assert 'secret123' not in result.stdout
 
 {% if with_example %}
 class TestDemoCommand:

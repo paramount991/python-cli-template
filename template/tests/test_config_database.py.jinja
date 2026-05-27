@@ -3,8 +3,6 @@
 # All rights reserved.
 """测试 core.config.database 模块."""
 
-import warnings
-
 import pytest
 
 from {{ package_slug }}.core.config.database import DatabaseConfig
@@ -97,15 +95,14 @@ class TestSafeUrl:
 class TestPortValidation:
     """测试端口验证器."""
 
-    def test_non_default_postgresql_port_warns(self) -> None:
-        with pytest.warns(UserWarning, match='非默认端口'):
-            DatabaseConfig(type=DatabaseType.POSTGRESQL, port=9999)
+    def test_non_default_postgresql_port_warns(self, caplog) -> None:
+        DatabaseConfig(type=DatabaseType.POSTGRESQL, port=9999)
+        assert '非默认端口' in caplog.text
 
-    def test_non_default_mysql_port_warns(self) -> None:
-        with pytest.warns(UserWarning, match='非默认MySQL端口'):
-            DatabaseConfig(type=DatabaseType.MYSQL, port=9999)
+    def test_non_default_mysql_port_warns(self, caplog) -> None:
+        DatabaseConfig(type=DatabaseType.MYSQL, port=9999)
+        assert '非默认MySQL端口' in caplog.text
 
-    def test_default_port_no_warning(self) -> None:
-        with warnings.catch_warnings(record=True) as w:
-            DatabaseConfig(type=DatabaseType.POSTGRESQL, port=5432)
-        assert len(w) == 0
+    def test_default_port_no_warning(self, caplog) -> None:
+        DatabaseConfig(type=DatabaseType.POSTGRESQL, port=5432)
+        assert caplog.text == ''
