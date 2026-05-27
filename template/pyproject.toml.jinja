@@ -22,6 +22,9 @@ dependencies = [
 requires = ["uv_build>=0.9.13,<0.10.0"]
 build-backend = "uv_build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["{{ package_slug }}"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.0.0,<9",
