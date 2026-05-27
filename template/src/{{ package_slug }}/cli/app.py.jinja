@@ -9,7 +9,7 @@ from .commands import (
     version_app,
 )
 
-app = Typer(callback=global_options, pretty_exceptions_show_locals=False)
+app = Typer(callback=global_options, pretty_exceptions_show_locals=False, no_args_is_help=True)
 
 app.add_typer(config_app, name='config')
 {%- if with_example %}

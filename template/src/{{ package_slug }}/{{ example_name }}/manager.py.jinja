@@ -17,5 +17,8 @@ def process(
         input_path: 输入路径
         output_path: 输出路径
     """
-    # TODO: 实现具体的 {{ example_name }} 业务逻辑
-    pass
+    log.warning('process is a stub; implement your business logic here')
+    if input_path is not None:
+        log.info('input_path=%s', input_path)
+    if output_path is not None:
+        log.info('output_path=%s', output_path)
