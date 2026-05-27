@@ -3,6 +3,8 @@
 # All rights reserved.
 """CLI 全局选项 — 现代化实现: -v/-q 计数模式."""
 
+from pathlib import Path
+
 import typer
 from pydantic import BaseModel, ConfigDict
 
@@ -107,8 +109,21 @@ def global_options(
 
     sub_command = ctx.invoked_subcommand
     if sub_command is None:
-        typer.echo('请使用子命令 help 查看帮助')
         raise typer.Exit()
+
+    # 用户显式指定了 --config 但文件不存在, 且非 config 子命令
+    if (
+        config_file is not None
+        and not Path(config_file).expanduser().resolve().exists()
+        and sub_command != 'config'
+    ):
+        typer.secho(
+            f'配置文件不存在: {config_file}',
+            fg=typer.colors.RED,
+        )
+        typer.echo("使用 'config init' 创建默认配置文件")
+        raise typer.Exit(code=1)
+    # config 子命令各自检查文件是否存在, 不在此处拦截
 
     bootstrap_app(
         config_file=resolved_config,
