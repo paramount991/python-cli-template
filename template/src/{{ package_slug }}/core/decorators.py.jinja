@@ -5,9 +5,10 @@
 
 from collections.abc import Callable
 from functools import wraps
-from typing import ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 import typer
+from pydantic import ValidationError
 
 from .log import get_logger
 
@@ -15,8 +16,18 @@ P = ParamSpec('P')
 T = TypeVar('T')
 
 
+def _format_validation_error(e: ValidationError) -> str:
+    """将 Pydantic ValidationError 格式化为用户可读的列表."""
+    lines: list[str] = []
+    for error in e.errors():
+        loc = '.'.join(str(p) for p in error['loc'])
+        msg = error['msg']
+        lines.append(f'  {loc}: {msg}')
+    return '\n'.join(lines)
+
+
 def log_command(cmd_name: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    """命令执行日志装饰器 (INFO 级别, 始终记录)."""
+    """命令执行日志装饰器 (DEBUG 级别, 避免终端噪音)."""
     log = get_logger()
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
@@ -34,7 +45,7 @@ def log_command(cmd_name: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
                     if k != 'ctx'
                 )
             params_str = ', '.join(params) if params else '(无)'
-            log.info(f'执行命令: {cmd_name} | {params_str}')
+            log.debug(f'执行命令: {cmd_name} | {params_str}')
             return func(*args, **kwargs)
 
         return wrapper
@@ -52,6 +63,11 @@ def handle_errors[**P, T](func: Callable[P, T]) -> Callable[P, T]:
             return func(*args, **kwargs)
         except typer.Exit:
             raise
+        except ValidationError as e:
+            typer.secho('配置校验失败:', fg=typer.colors.RED, err=True)
+            typer.secho(_format_validation_error(e), fg=typer.colors.RED, err=True)
+            log.error('配置校验失败', exc_info=True)
+            raise typer.Exit(code=1) from None
         except Exception as e:
             log.error(f'命令执行失败: {e}', exc_info=True)
             typer.secho(f'错误: {e}', fg=typer.colors.RED, err=True)
