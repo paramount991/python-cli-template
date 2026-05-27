@@ -309,12 +309,93 @@ class TestMainWithoutSubcommand:
 
     def test_no_subcommand_shows_usage(self) -> None:
         result = runner.invoke(app, [])
-        # 无子命令时应提供帮助信息并退出
-        assert result.exit_code != 0 or '使用子命令' in result.stdout or 'help' in result.stdout
+        # no_args_is_help: 无参数时显示帮助 (Typer 在某些版本返回 exit_code=2)
+        assert 'Usage:' in result.stdout or 'Usage:' in result.stderr
 
     def test_help_flag_shows_usage(self) -> None:
         result = runner.invoke(app, ['--help'])
         assert result.exit_code == 0
+
+
+class TestNonexistentConfig:
+    """测试 --config 指向不存在的文件."""
+
+    def test_error_for_non_config_subcommand(self) -> None:
+        """非 config 子命令 + 不存在的 --config → 报错."""
+        result = runner.invoke(app, ['--config', '/nonexistent/path.toml', 'version'])
+        assert result.exit_code == 1
+        assert '不存在' in result.stdout
+
+    def test_allowed_for_config_init(self, tmp_path: Path) -> None:
+        """config init 允许配置文件不存在 (即将创建)."""
+        config_path = tmp_path / 'will_be_created.toml'
+        result = runner.invoke(app, ['--config', str(config_path), 'config', 'init'])
+        assert result.exit_code == 0
+
+
+class TestConfigPathWarning:
+    """测试 config path 在文件不存在时警告."""
+
+    def test_warns_when_file_nonexistent(self) -> None:
+        result = runner.invoke(app, ['--config', '/nonexistent/cfg.toml', 'config', 'path'])
+        assert result.exit_code == 0
+        assert '注意' in result.stdout or 'not exist' in result.stdout.lower() or 'does not' in result.stdout.lower()
+        assert 'nonexistent' in result.stdout
+
+
+class TestConfigSetBoolCoercion:
+    """测试 config set 布尔值类型转换."""
+
+    def test_invalid_bool_warns(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = dict(
+            app={'name': 'test'},
+            env={'environment': 'development', 'debug': False},
+            log={'level': 'INFO'},
+            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                'username': 'test', 'password': '', 'database': 'test'},
+        )
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'set', 'env.debug', 'ture']
+        )
+        assert result.exit_code == 0  # 仍允许设置, 但有警告
+        assert '无效的布尔值' in result.stdout
+
+    def test_valid_bool_true_no_warning(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = dict(
+            app={'name': 'test'},
+            env={'environment': 'development', 'debug': False},
+            log={'level': 'INFO'},
+            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                'username': 'test', 'password': '', 'database': 'test'},
+        )
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'set', 'env.debug', 'true']
+        )
+        assert result.exit_code == 0
+        assert '无效的布尔值' not in result.stdout
+
+    def test_valid_bool_false_no_warning(self, tmp_path: Path) -> None:
+        config_path = tmp_path / 'config.toml'
+        data = dict(
+            app={'name': 'test'},
+            env={'environment': 'development', 'debug': False},
+            log={'level': 'INFO'},
+            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
+                'username': 'test', 'password': '', 'database': 'test'},
+        )
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        result = runner.invoke(
+            app, ['--config', str(config_path), 'config', 'set', 'env.debug', 'off']
+        )
+        assert result.exit_code == 0
+        assert '无效的布尔值' not in result.stdout
 
 {% if with_example %}
 class TestDemoCommand:
@@ -331,6 +412,7 @@ class TestDemoCommand:
     def test_demo_process_runs(self) -> None:
         result = runner.invoke(app, ['{{ example_name }}', 'process'])
         assert result.exit_code == 0
+        assert 'stub' in result.stdout or 'stub' in result.stderr
 
     def test_demo_process_with_input_output(self) -> None:
         result = runner.invoke(
