@@ -25,13 +25,11 @@ repos:
         args: ['check', '--fix', '--exit-non-zero-on-fix']
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+  - repo: local
     hooks:
-      - id: mypy
-        args: ['--strict', '--ignore-missing-imports']
-        additional_dependencies:
-          - pydantic>=2.13.4
-          - pydantic-settings>=2.14.0
-          - structlog>=25.5.0
-          - typer>=0.25.1
+      - id: ty
+        name: ty
+        entry: ty check
+        require_serial: true
+        language: system
+        types_or: [python, pyi]

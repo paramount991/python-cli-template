@@ -29,9 +29,13 @@ packages = ["{{ package_slug }}"]
 dev = [
     "pytest>=8.0.0,<9",
     "ruff>=0.15.12,<1",
+    "ty>=0.0.6,<1",
 ]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
 python_files = "test_*.py"
+
+[tool.ty.rules]
+unused-ignore-comment = "warn"

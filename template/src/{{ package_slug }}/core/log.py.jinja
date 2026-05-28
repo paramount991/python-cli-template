@@ -129,7 +129,7 @@ def _build_file_handler(
     max_bytes: int,
     backup_count: int,
     log_level: int,
-    formatter: logging.Formatter,
+    formatter: logging.Formatter | None,
 ) -> logging.Handler:
     """根据配置构建文件 handler: max_bytes > 0 用大小轮转,否则按天轮转."""
     if max_bytes > 0:

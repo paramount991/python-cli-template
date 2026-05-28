@@ -4,6 +4,7 @@
 """CLI 集成测试 — 使用 Typer CliRunner 端到端测试命令."""
 
 from pathlib import Path
+from typing import Generator
 
 import pytest
 import tomli_w
@@ -16,7 +17,7 @@ runner = CliRunner()
 
 
 @pytest.fixture(autouse=True)
-def _reset() -> None:
+def _reset() -> Generator[None, None, None]:
     """每个测试后清理 Settings 缓存."""
     yield
     clear_settings()

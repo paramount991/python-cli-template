@@ -14,7 +14,7 @@ from .cli import app
 for stream in (sys.stdout, sys.stderr):
     if stream.encoding and stream.encoding.lower() not in ('utf-8', 'utf8'):
         with contextlib.suppress(Exception):
-            stream.reconfigure(encoding='utf-8')
+            stream.reconfigure(encoding='utf-8')  # type: ignore
 
 
 @support_help_at_end

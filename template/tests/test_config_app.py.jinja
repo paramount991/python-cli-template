@@ -67,4 +67,4 @@ class TestAppConfigExtraForbid:
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError, match='unknown_field'):
-            AppConfig(name='test', unknown_field='should_fail')
+            AppConfig(name='test', unknown_field='should_fail')  # type: ignore
