@@ -9,37 +9,46 @@ from pathlib import Path
 import pytest
 import tomli_w
 
-from {{ package_slug }}.core.config.settings import clear_settings
+from {{ package_slug }}.core.config.loader import clear_settings
 
 
 @pytest.fixture
-def tmp_config_file(tmp_path: Path) -> Path:
+def minimal_config_data() -> dict:
+    """返回最小有效配置数据字典, 供各测试复用和定制."""
+    return {
+        'app': {'name': 'test-app', 'version': '0.1.0', 'description': 'test'},
+        'env': {'environment': 'development', 'debug': False},
+        'log': {
+            'level': 'INFO',
+            'format': 'json',
+            'output': 'console',
+            'dir_name': 'logs',
+            'file_name': 'app.log',
+            'max_bytes': 10485760,
+            'backup_count': 5,
+        },
+        'db': {
+            'type': 'sqlite',
+            'host': 'localhost',
+            'port': 5432,
+            'username': 'test',
+            'password': '',
+            'database': 'test',
+            'pool_size': 20,
+            'max_overflow': 10,
+            'pool_timeout': 30,
+            'pool_recycle': 3600,
+        },
+    }
+
+
+@pytest.fixture
+def tmp_config_file(tmp_path: Path, minimal_config_data: dict) -> Path:
     """在临时目录创建最小有效 TOML 配置文件."""
-    data = dict(
-        app=dict(name='test-app', version='0.1.0', description='test'),
-        env=dict(environment='development', debug=False),
-        log=dict(
-            level='INFO',
-            format='json',
-            output='console',
-            dir_name='logs',
-            file_name='app.log',
-            max_bytes=10485760,
-            backup_count=5,
-        ),
-        db=dict(
-            type='sqlite',
-            host='localhost',
-            port=5432,
-            username='test',
-            password='password',
-            database='test_db',
-            pool_size=20,
-            max_overflow=10,
-            pool_timeout=30,
-            pool_recycle=3600,
-        ),
-    )
+    data = {
+        **minimal_config_data,
+        'db': {**minimal_config_data['db'], 'password': 'password', 'database': 'test_db'},
+    }
     path = tmp_path / 'test_config.toml'
     with open(path, 'wb') as f:
         tomli_w.dump(data, f)
@@ -47,33 +56,34 @@ def tmp_config_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def full_config_file(tmp_path: Path) -> Path:
+def full_config_file(tmp_path: Path, minimal_config_data: dict) -> Path:
     """在临时目录创建完整的 TOML 配置文件 (含所有字段)."""
-    data = dict(
-        app=dict(name='full-app', version='2.0.0', description='full config'),
-        env=dict(environment='staging', debug=True),
-        log=dict(
-            level='DEBUG',
-            format='text',
-            output='both',
-            dir_name='logs',
-            file_name='full.log',
-            max_bytes=5242880,
-            backup_count=10,
-        ),
-        db=dict(
-            type='postgresql',
-            host='db.example.com',
-            port=5432,
-            username='admin',
-            password='secret123',
-            database='prod_db',
-            pool_size=50,
-            max_overflow=20,
-            pool_timeout=60,
-            pool_recycle=1800,
-        ),
-    )
+    data = {
+        **minimal_config_data,
+        'app': {'name': 'full-app', 'version': '2.0.0', 'description': 'full config'},
+        'env': {'environment': 'staging', 'debug': True},
+        'log': {
+            **minimal_config_data['log'],
+            'level': 'DEBUG',
+            'format': 'text',
+            'output': 'both',
+            'file_name': 'full.log',
+            'max_bytes': 5242880,
+            'backup_count': 10,
+        },
+        'db': {
+            **minimal_config_data['db'],
+            'type': 'postgresql',
+            'host': 'db.example.com',
+            'username': 'admin',
+            'password': 'secret123',
+            'database': 'prod_db',
+            'pool_size': 50,
+            'max_overflow': 20,
+            'pool_timeout': 60,
+            'pool_recycle': 1800,
+        },
+    }
     path = tmp_path / 'full_config.toml'
     with open(path, 'wb') as f:
         tomli_w.dump(data, f)
@@ -85,3 +95,15 @@ def _reset_settings() -> Generator[None, None, None]:
     """每个测试后自动清除 Settings 单例缓存."""
     yield
     clear_settings()
+
+
+@pytest.fixture(autouse=True)
+def _reset_logging() -> Generator[None, None, None]:
+    """每个测试后重置日志模块的初始化状态和 root logger handlers."""
+    yield
+    import logging
+
+    from {{ package_slug }}.core import log as log_module
+
+    log_module._INITIALIZED = False
+    logging.getLogger().handlers.clear()

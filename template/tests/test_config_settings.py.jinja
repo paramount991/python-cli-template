@@ -10,12 +10,15 @@ import tomli_w
 
 from {{ package_slug }}.core.config.environment import EnvironmentConfig
 from {{ package_slug }}.core.config.database import DatabaseConfig
-from {{ package_slug }}.core.config.settings import (
-    Settings,
-    _deep_merge,
+from {{ package_slug }}.core.config.loader import (
     clear_settings,
     get_settings,
     load_settings,
+)
+from {{ package_slug }}.core.config.settings import (
+    Settings,
+    _deep_merge,
+    _read_env_overrides,
 )
 from {{ package_slug }}.core.constants import EnvironmentType
 
@@ -219,3 +222,24 @@ class TestSettingsSingleton:
         clear_settings()
         s2 = get_settings()
         assert s1 is not s2
+
+
+class TestReadEnvOverrides:
+    """测试 _read_env_overrides 函数."""
+
+    def test_returns_empty_dict_when_no_env_vars(self) -> None:
+        result = _read_env_overrides()
+        assert result == {}
+
+    def test_reads_nested_env_vars(self, monkeypatch) -> None:
+        monkeypatch.setenv('{{ package_slug | upper }}_LOG_LEVEL', 'DEBUG')
+        monkeypatch.setenv('{{ package_slug | upper }}_LOG_FORMAT', 'text')
+        result = _read_env_overrides()
+        assert result == {'log': {'level': 'DEBUG', 'format': 'text'}}
+
+    def test_reads_multiple_sections(self, monkeypatch) -> None:
+        monkeypatch.setenv('{{ package_slug | upper }}_APP_NAME', 'env-app')
+        monkeypatch.setenv('{{ package_slug | upper }}_DB_HOST', 'env-db')
+        result = _read_env_overrides()
+        assert result['app']['name'] == 'env-app'
+        assert result['db']['host'] == 'env-db'

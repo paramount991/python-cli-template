@@ -12,7 +12,7 @@ from {{ package_slug }}.core.config.serializer import (
     save_config_file,
     save_default_config,
 )
-from {{ package_slug }}.core.config.settings import clear_settings
+from {{ package_slug }}.core.config.loader import clear_settings
 from {{ package_slug }}.core.constants import ConfigType
 
 

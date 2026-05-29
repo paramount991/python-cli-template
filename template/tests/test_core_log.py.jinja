@@ -29,10 +29,7 @@ class TestGetLogger:
         assert hasattr(logger, 'info')
         assert hasattr(logger, 'error')
 
-    def test_logger_can_log(self, monkeypatch) -> None:
-        monkeypatch.setattr(
-            '{{ package_slug }}.core.log._INITIALIZED', False
-        )
+    def test_logger_can_log(self) -> None:
         init_logging({'level': 'INFO', 'output': 'console'})
         logger = get_logger('test')
         logger.info('test message')
@@ -91,16 +88,10 @@ class TestBuildFileHandler:
 class TestInitLogging:
     """测试 init_logging 初始化."""
 
-    def test_init_does_not_raise_with_minimal_config(self, monkeypatch) -> None:
-        monkeypatch.setattr(
-            '{{ package_slug }}.core.log._INITIALIZED', False
-        )
+    def test_init_does_not_raise_with_minimal_config(self) -> None:
         init_logging({'level': 'INFO', 'output': 'console'})
 
-    def test_init_does_not_raise_with_file_output(self, monkeypatch, tmp_path: Path) -> None:
-        monkeypatch.setattr(
-            '{{ package_slug }}.core.log._INITIALIZED', False
-        )
+    def test_init_does_not_raise_with_file_output(self, tmp_path: Path) -> None:
         log_path = tmp_path / 'test.log'
         init_logging({
             'level': 'DEBUG',
@@ -109,32 +100,20 @@ class TestInitLogging:
         })
         assert log_path.exists() or True  # delay=True 可能延迟创建
 
-    def test_init_idempotent(self, monkeypatch) -> None:
-        monkeypatch.setattr(
-            '{{ package_slug }}.core.log._INITIALIZED', False
-        )
+    def test_init_idempotent(self) -> None:
         init_logging({'level': 'INFO', 'output': 'console'})
         init_logging({'level': 'ERROR', 'output': 'console'})
 
-    def test_init_with_text_format(self, monkeypatch) -> None:
-        monkeypatch.setattr(
-            '{{ package_slug }}.core.log._INITIALIZED', False
-        )
+    def test_init_with_text_format(self) -> None:
         init_logging({'level': 'INFO', 'format': 'text', 'output': 'console'})
 
-    def test_init_respects_log_level(self, monkeypatch) -> None:
+    def test_init_respects_log_level(self) -> None:
         import logging
 
-        monkeypatch.setattr(
-            '{{ package_slug }}.core.log._INITIALIZED', False
-        )
         init_logging({'level': 'ERROR', 'output': 'console'})
         assert logging.getLogger().level == logging.ERROR
 
-    def test_get_logger_works_after_init(self, monkeypatch) -> None:
-        monkeypatch.setattr(
-            '{{ package_slug }}.core.log._INITIALIZED', False
-        )
+    def test_get_logger_works_after_init(self) -> None:
         init_logging({'level': 'INFO', 'output': 'console'})
         logger = get_logger('test')
         logger.info('test message')

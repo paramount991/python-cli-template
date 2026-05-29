@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+# Copyright (c) {{ author_name }}
+# All rights reserved.
+"""配置加载与单例管理."""
+
+import threading
+from pathlib import Path
+
+import tomllib
+from pydantic import ValidationError
+
+from .settings import ENV_PREFIX, Settings, _deep_merge
+
+# 模块级单例缓存及线程锁
+_current_settings: 'Settings | None' = None
+_settings_lock = threading.Lock()
+
+
+def load_settings(
+    file_path: str | Path | None = None,
+    override_path: str | Path | None = None,
+    from_text: str | None = None,
+) -> Settings:
+    """从配置文件加载设置, 并缓存为当前激活配置.
+
+    Args:
+        file_path: 基础配置文件路径, None 则使用默认值.
+        override_path: 覆盖配置文件, 深度合并到基础配置之上 (如 dev/prod 覆盖).
+        from_text: 直接解析 TOML 文本 (用于写入前校验), 与 file_path 互斥.
+    """
+    global _current_settings
+
+    if from_text is not None:
+        return Settings.from_toml_text(from_text)
+    elif file_path is None:
+        settings: Settings = Settings()
+    else:
+        file_path = Path(file_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f'配置文件不存在: {file_path}')
+        try:
+            settings = Settings.from_toml(file_path)
+        except ValidationError as e:
+            raise ValueError(f'配置文件解析错误: {e}') from e
+        except Exception as e:
+            raise ValueError(f'配置文件加载错误: {e}') from e
+
+    if override_path is not None:
+        override_path = Path(override_path)
+        if not override_path.exists():
+            raise FileNotFoundError(f'覆盖配置文件不存在: {override_path}')
+        with open(override_path, 'rb') as f:
+            override_data = tomllib.load(f)
+        merged = _deep_merge(settings.model_dump(mode='json'), override_data)
+        settings = Settings.model_validate(merged)
+
+    with _settings_lock:
+        _current_settings = settings
+    return settings
+
+
+def get_settings(
+    file_path: str | Path | None = None,
+) -> Settings:
+    """获取配置实例 (单例模式).
+
+    首次调用返回默认配置或从文件加载, 后续返回缓存实例.
+    传入 file_path 会强制重新加载.
+    """
+    global _current_settings
+
+    if file_path is not None:
+        return load_settings(file_path)
+
+    settings = _current_settings
+    if settings is None:
+        with _settings_lock:
+            if _current_settings is None:
+                _current_settings = Settings()
+            settings = _current_settings
+
+    return settings
+
+
+def clear_settings() -> None:
+    """清除配置缓存, 下次调用 get_settings 将重新创建."""
+    global _current_settings
+    with _settings_lock:
+        _current_settings = None

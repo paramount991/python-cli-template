@@ -11,7 +11,7 @@ import tomli_w
 from typer.testing import CliRunner
 
 from {{ package_slug }}.cli.app import app
-from {{ package_slug }}.core.config.settings import clear_settings
+from {{ package_slug }}.core.config.loader import clear_settings
 
 runner = CliRunner()
 
@@ -59,17 +59,10 @@ class TestConfigInit:
 class TestConfigValidate:
     """测试 config validate 命令."""
 
-    def test_validate_valid_config(self, tmp_path: Path) -> None:
+    def test_validate_valid_config(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'valid.toml'
-        data = {
-            'app': {'name': 'test'},
-            'env': {'environment': 'development', 'debug': False},
-            'log': {'level': 'INFO'},
-            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                   'username': 'test', 'password': '', 'database': 'test'},
-        }
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(app, ['--config', str(config_path), 'config', 'validate'])
         assert result.exit_code == 0
 
@@ -87,34 +80,20 @@ class TestConfigValidate:
 class TestConfigSet:
     """测试 config set 命令."""
 
-    def test_set_valid_value(self, tmp_path: Path) -> None:
+    def test_set_valid_value(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = {
-            'app': {'name': 'test'},
-            'env': {'environment': 'development', 'debug': False},
-            'log': {'level': 'INFO'},
-            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                   'username': 'test', 'password': '', 'database': 'test'},
-        }
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'set', 'log.level', 'DEBUG']
         )
         assert result.exit_code == 0
         assert 'DEBUG' in config_path.read_text()
 
-    def test_set_dry_run_no_write(self, tmp_path: Path) -> None:
+    def test_set_dry_run_no_write(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = {
-            'app': {'name': 'test'},
-            'env': {'environment': 'development', 'debug': False},
-            'log': {'level': 'INFO'},
-            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                   'username': 'test', 'password': '', 'database': 'test'},
-        }
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         original = config_path.read_text()
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'set', 'log.level', 'DEBUG', '--dry-run']
@@ -123,17 +102,10 @@ class TestConfigSet:
         assert '[dry-run]' in result.stdout
         assert config_path.read_text() == original
 
-    def test_set_invalid_key(self, tmp_path: Path) -> None:
+    def test_set_invalid_key(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = {
-            'app': {'name': 'test'},
-            'env': {'environment': 'development', 'debug': False},
-            'log': {'level': 'INFO'},
-            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                   'username': 'test', 'password': '', 'database': 'test'},
-        }
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'set', 'nonexistent.field', 'value']
         )
@@ -143,51 +115,30 @@ class TestConfigSet:
 class TestConfigGetList:
     """测试 config get/list 命令."""
 
-    def test_get_existing_key(self, tmp_path: Path) -> None:
+    def test_get_existing_key(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = {
-            'app': {'name': 'test'},
-            'env': {'environment': 'development', 'debug': False},
-            'log': {'level': 'INFO'},
-            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                   'username': 'test', 'password': '', 'database': 'test'},
-        }
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'get', 'db.type']
         )
         assert result.exit_code == 0
         assert 'sqlite' in result.stdout
 
-    def test_list_output(self, tmp_path: Path) -> None:
+    def test_list_output(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = {
-            'app': {'name': 'test'},
-            'env': {'environment': 'development', 'debug': False},
-            'log': {'level': 'INFO'},
-            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                   'username': 'test', 'password': '', 'database': 'test'},
-        }
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'list']
         )
         assert result.exit_code == 0
         assert 'test' in result.stdout
 
-    def test_list_json_output(self, tmp_path: Path) -> None:
+    def test_list_json_output(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = {
-            'app': {'name': 'test'},
-            'env': {'environment': 'development', 'debug': False},
-            'log': {'level': 'INFO'},
-            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                   'username': 'test', 'password': '', 'database': 'test'},
-        }
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'list', '--output', 'json']
         )
@@ -198,17 +149,10 @@ class TestConfigGetList:
 class TestConfigPath:
     """测试 config path 命令."""
 
-    def test_path_output(self, tmp_path: Path) -> None:
+    def test_path_output(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = dict(
-            app={'name': 'test'},
-            env={'environment': 'development', 'debug': False},
-            log={'level': 'INFO'},
-            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                'username': 'test', 'password': '', 'database': 'test'},
-        )
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'path']
         )
@@ -252,17 +196,10 @@ class TestConfigCopy:
 class TestConfigGet:
     """测试 config get 命令 (补充)."""
 
-    def test_get_invalid_key(self, tmp_path: Path) -> None:
+    def test_get_invalid_key(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = dict(
-            app={'name': 'test'},
-            env={'environment': 'development', 'debug': False},
-            log={'level': 'INFO'},
-            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                'username': 'test', 'password': '', 'database': 'test'},
-        )
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'get', 'nonexistent.key']
         )
@@ -347,51 +284,30 @@ class TestConfigPathWarning:
 class TestConfigSetBoolCoercion:
     """测试 config set 布尔值类型转换."""
 
-    def test_invalid_bool_errors(self, tmp_path: Path) -> None:
+    def test_invalid_bool_errors(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = dict(
-            app={'name': 'test'},
-            env={'environment': 'development', 'debug': False},
-            log={'level': 'INFO'},
-            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                'username': 'test', 'password': '', 'database': 'test'},
-        )
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'set', 'env.debug', 'ture']
         )
         assert result.exit_code == 1
         assert '无效的布尔值' in result.stdout
 
-    def test_valid_bool_true_no_warning(self, tmp_path: Path) -> None:
+    def test_valid_bool_true_no_warning(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = dict(
-            app={'name': 'test'},
-            env={'environment': 'development', 'debug': False},
-            log={'level': 'INFO'},
-            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                'username': 'test', 'password': '', 'database': 'test'},
-        )
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'set', 'env.debug', 'true']
         )
         assert result.exit_code == 0
         assert '无效的布尔值' not in result.stdout
 
-    def test_valid_bool_false_no_warning(self, tmp_path: Path) -> None:
+    def test_valid_bool_false_no_warning(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = dict(
-            app={'name': 'test'},
-            env={'environment': 'development', 'debug': False},
-            log={'level': 'INFO'},
-            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                'username': 'test', 'password': '', 'database': 'test'},
-        )
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'set', 'env.debug', 'off']
         )
@@ -402,17 +318,10 @@ class TestConfigSetBoolCoercion:
 class TestConfigShowAlias:
     """测试 config show 别名."""
 
-    def test_show_is_alias_for_list(self, tmp_path: Path) -> None:
+    def test_show_is_alias_for_list(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = dict(
-            app={'name': 'test'},
-            env={'environment': 'development', 'debug': False},
-            log={'level': 'INFO'},
-            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                'username': 'test', 'password': '', 'database': 'test'},
-        )
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(app, ['--config', str(config_path), 'config', 'show'])
         assert result.exit_code == 0
         assert 'test' in result.stdout
@@ -421,17 +330,10 @@ class TestConfigShowAlias:
 class TestConfigListInvalidOutput:
     """测试 config list --output 无效格式."""
 
-    def test_invalid_output_format_errors(self, tmp_path: Path) -> None:
+    def test_invalid_output_format_errors(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = dict(
-            app={'name': 'test'},
-            env={'environment': 'development', 'debug': False},
-            log={'level': 'INFO'},
-            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                'username': 'test', 'password': '', 'database': 'test'},
-        )
         with open(config_path, 'wb') as f:
-            tomli_w.dump(data, f)
+            tomli_w.dump(minimal_config_data, f)
         result = runner.invoke(
             app, ['--config', str(config_path), 'config', 'list', '--output', 'yaml']
         )
@@ -442,15 +344,9 @@ class TestConfigListInvalidOutput:
 class TestConfigSensitiveMasking:
     """测试 config get/list 敏感字段脱敏."""
 
-    def test_get_masks_password(self, tmp_path: Path) -> None:
+    def test_get_masks_password(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = dict(
-            app={'name': 'test'},
-            env={'environment': 'development', 'debug': False},
-            log={'level': 'INFO'},
-            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                'username': 'test', 'password': 'secret123', 'database': 'test'},
-        )
+        data = {**minimal_config_data, 'db': {**minimal_config_data['db'], 'password': 'secret123'}}
         with open(config_path, 'wb') as f:
             tomli_w.dump(data, f)
         result = runner.invoke(
@@ -460,15 +356,9 @@ class TestConfigSensitiveMasking:
         assert '********' in result.stdout
         assert 'secret123' not in result.stdout
 
-    def test_list_masks_password(self, tmp_path: Path) -> None:
+    def test_list_masks_password(self, tmp_path: Path, minimal_config_data: dict) -> None:
         config_path = tmp_path / 'config.toml'
-        data = dict(
-            app={'name': 'test'},
-            env={'environment': 'development', 'debug': False},
-            log={'level': 'INFO'},
-            db={'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                'username': 'test', 'password': 'secret123', 'database': 'test'},
-        )
+        data = {**minimal_config_data, 'db': {**minimal_config_data['db'], 'password': 'secret123'}}
         with open(config_path, 'wb') as f:
             tomli_w.dump(data, f)
         result = runner.invoke(app, ['--config', str(config_path), 'config', 'list'])

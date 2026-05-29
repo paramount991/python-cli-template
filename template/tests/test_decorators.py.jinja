@@ -8,7 +8,13 @@ from typing import Any
 import pytest
 import typer
 
-from {{ package_slug }}.core.decorators import handle_errors, log_command
+from pydantic import BaseModel, ValidationError
+
+from {{ package_slug }}.core.decorators import (
+    _format_validation_error,
+    handle_errors,
+    log_command,
+)
 
 
 class TestHandleErrors:
@@ -85,3 +91,41 @@ class TestLogCommand:
         # 不传 ctx 时使用默认值
         result = func_with_ctx(42)
         assert result == '42-default'
+
+
+class TestFormatValidationError:
+    """测试 _format_validation_error 函数."""
+
+    class _TestModel(BaseModel):
+        """用于测试的 Pydantic 模型."""
+
+        name: str
+        age: int
+
+    def test_formats_single_error(self) -> None:
+        try:
+            self._TestModel.model_validate({'name': 'test', 'age': 'not-a-number'})
+        except ValidationError as e:
+            result = _format_validation_error(e)
+        assert 'age' in result
+        assert 'not-a-number' in result.lower() or 'int' in result.lower()
+
+    def test_formats_multiple_errors(self) -> None:
+        try:
+            self._TestModel.model_validate({})
+        except ValidationError as e:
+            result = _format_validation_error(e)
+        lines = result.split('\n')
+        assert len(lines) == 2
+        assert 'name' in result
+        assert 'age' in result
+
+    def test_loc_with_nested_path(self) -> None:
+        class NestedModel(BaseModel):
+            inner: self._TestModel  # type: ignore[name-defined]
+
+        try:
+            NestedModel.model_validate({'inner': {'name': 'x'}})
+        except ValidationError as e:
+            result = _format_validation_error(e)
+        assert 'inner.age' in result

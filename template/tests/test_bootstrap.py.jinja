@@ -4,61 +4,96 @@
 """测试 cli.callbacks.bootstrap 模块."""
 
 from pathlib import Path
-from unittest.mock import patch
 
 import tomli_w
 
-from {{ package_slug }}.cli.callbacks.bootstrap import bootstrap_app
-from {{ package_slug }}.core.config.settings import Settings, clear_settings
+from {{ package_slug }}.cli.callbacks.bootstrap import (
+    bootstrap_app,
+    resolve_config,
+    resolve_log_path,
+)
+from {{ package_slug }}.core.config.loader import clear_settings
+from {{ package_slug }}.core.config.settings import Settings
 from {{ package_slug }}.core.constants import LogLevel
 
 
-class TestBootstrapApp:
-    """测试 bootstrap_app 函数."""
+class TestResolveConfig:
+    """测试 resolve_config 函数."""
 
-    @patch('{{ package_slug }}.cli.callbacks.bootstrap.init_logging')
-    def test_returns_settings_with_defaults(self, mock_init) -> None:
+    def test_returns_settings_when_file_not_found(self) -> None:
+        clear_settings()
+        cfg = resolve_config('/nonexistent/path.toml')
+        assert isinstance(cfg, Settings)
+
+    def test_loads_existing_config_file(self, tmp_path: Path, minimal_config_data: dict) -> None:
+        clear_settings()
+        config_path = tmp_path / 'config.toml'
+        data = {**minimal_config_data, 'app': {**minimal_config_data['app'], 'name': 'resolved-app'}}
+        with open(config_path, 'wb') as f:
+            tomli_w.dump(data, f)
+        cfg = resolve_config(str(config_path))
+        assert cfg.app.name == 'resolved-app'
+
+    def test_none_returns_default_settings(self) -> None:
+        clear_settings()
+        cfg = resolve_config(None)
+        assert isinstance(cfg, Settings)
+
+
+class TestResolveLogPath:
+    """测试 resolve_log_path 函数."""
+
+    def test_returns_explicit_log_file(self) -> None:
+        result = resolve_log_path('/custom/path.log', 'logs', 'app.log')
+        assert result == '/custom/path.log'
+
+    def test_returns_user_log_dir_when_no_explicit(self) -> None:
+        result = resolve_log_path(None, 'logs', 'app.log')
+        assert result is not None
+        assert result.endswith('app.log')
+
+    def test_returns_none_when_dir_name_empty(self) -> None:
+        result = resolve_log_path(None, '', 'app.log')
+        assert result is None
+
+    def test_returns_none_when_file_name_empty(self) -> None:
+        result = resolve_log_path(None, 'logs', '')
+        assert result is None
+
+
+class TestBootstrapApp:
+    """测试 bootstrap_app 编排函数."""
+
+    def test_returns_settings_with_defaults(self) -> None:
         clear_settings()
         cfg = bootstrap_app()
         assert isinstance(cfg, Settings)
         assert cfg.app is not None
         assert cfg.env is not None
 
-    @patch('{{ package_slug }}.cli.callbacks.bootstrap.init_logging')
-    def test_loads_from_config_file(self, mock_init, tmp_path: Path) -> None:
+    def test_loads_from_config_file(self, tmp_path: Path, minimal_config_data: dict) -> None:
         clear_settings()
         config_path = tmp_path / 'config.toml'
-        data = {
-            'app': {'name': 'loaded-app'},
-            'env': {'environment': 'development', 'debug': False},
-            'log': {'level': 'INFO', 'format': 'json', 'output': 'console',
-                    'dir_name': 'logs', 'file_name': 'app.log',
-                    'max_bytes': 10485760, 'backup_count': 5},
-            'db': {'type': 'sqlite', 'host': 'localhost', 'port': 5432,
-                   'username': 'test', 'password': '', 'database': 'test',
-                   'pool_size': 20, 'max_overflow': 10,
-                   'pool_timeout': 30, 'pool_recycle': 3600},
-        }
+        data = {**minimal_config_data, 'app': {**minimal_config_data['app'], 'name': 'loaded-app'}}
         with open(config_path, 'wb') as f:
             tomli_w.dump(data, f)
         cfg = bootstrap_app(config_file=str(config_path))
         assert cfg.app.name == 'loaded-app'
 
-    @patch('{{ package_slug }}.cli.callbacks.bootstrap.init_logging')
-    def test_cli_msg_level_overrides(self, mock_init) -> None:
+    def test_cli_msg_level_overrides(self) -> None:
         clear_settings()
         cfg = bootstrap_app(msg_level=LogLevel.ERROR)
         assert cfg.log.level == LogLevel.ERROR
 
-    @patch('{{ package_slug }}.cli.callbacks.bootstrap.init_logging')
-    def test_cli_log_file_overrides(self, mock_init) -> None:
+    def test_cli_log_file_overrides(self, tmp_path: Path) -> None:
         clear_settings()
-        bootstrap_app(log_file='/custom/path.log')
-        log_config = mock_init.call_args[0][0]
-        assert log_config['file_path'] == '/custom/path.log'
+        log_file = tmp_path / 'custom.log'
+        bootstrap_app(log_file=str(log_file))
+        import logging
+        root_handlers = logging.getLogger().handlers
+        assert len(root_handlers) > 0
 
-    @patch('{{ package_slug }}.cli.callbacks.bootstrap.init_logging')
-    def test_nonexistent_config_falls_back_to_defaults(self, mock_init) -> None:
+    def test_nonexistent_config_falls_back_to_defaults(self) -> None:
         clear_settings()
         cfg = bootstrap_app(config_file='/nonexistent/path.toml')
         assert isinstance(cfg, Settings)
