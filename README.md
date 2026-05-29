@@ -8,7 +8,7 @@
 - **pydantic-settings** — TOML 配置管理，`extra='forbid'`，支持环境变量覆盖
 - **structlog** — 结构化日志，控制台彩色 + 文件 JSON 轮转
 - **ruff** — 代码检查 + 格式化，开箱即用
-- **pytest** — 103 个测试用例，覆盖 CLI、配置、装饰器、全局选项
+- **pytest** — 全面的测试套件，覆盖 CLI、配置、装饰器、全局选项
 - **[just](https://github.com/casey/just)** — 命令运行器，`just lint` / `just test` / `just ci`
 - **可选示例模块** — 自定义模块名，或完全跳过
 - **可选文档站点** — Quarto 文档，自动生成 API 参考

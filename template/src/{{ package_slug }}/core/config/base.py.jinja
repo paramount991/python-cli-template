@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 # Copyright (c) {{ author_name }}
 # All rights reserved.
-"""配置管理-基础配置类."""
+"""所有模块化配置的抽象基类."""
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class BaseConfig(BaseSettings):
-    """基础配置类, 所有模块化配置的父类."""
+    """模块化配置基类, 所有子配置类均继承自此."""
 
     model_config = SettingsConfigDict(
-        case_sensitive=False,
         extra='forbid',
         validate_default=False,
         populate_by_name=True,
