@@ -8,8 +8,37 @@ from pathlib import Path
 from platformdirs import user_log_dir
 
 from {{ package_slug }}.core import constants as const
-from {{ package_slug }}.core.config.settings import Settings, load_settings
+from {{ package_slug }}.core.config.loader import load_settings
+from {{ package_slug }}.core.config.settings import Settings
 from {{ package_slug }}.core.log import init_logging
+from {{ package_slug }}.core.version import PACKAGE_NAME
+
+
+def resolve_config(config_file: str | None = None) -> Settings:
+    """解析配置: 文件不存在时回退到默认配置."""
+    if config_file is not None and not Path(config_file).exists():
+        return Settings()
+    return load_settings(config_file)
+
+
+def resolve_log_path(
+    log_file: str | None,
+    dir_name: str,
+    file_name: str,
+) -> str | None:
+    """解析日志文件路径.
+
+    CLI 显式指定 > 默认 user_log_dir; dir_name/file_name 为空则返回 None.
+    """
+    if log_file:
+        return log_file
+    if dir_name and file_name:
+        return str(
+            Path(user_log_dir(PACKAGE_NAME, appauthor=False))
+            / dir_name
+            / file_name
+        )
+    return None
 
 
 def bootstrap_app(
@@ -23,22 +52,10 @@ def bootstrap_app(
 
     若配置文件不存在 (如 config init 创建新文件), 回退到默认配置.
     """
-    if config_file is not None and not Path(config_file).exists():
-        cfg = Settings()
-    else:
-        cfg = load_settings(config_file)
-
-    # CLI 参数作为最高优先级覆盖
+    cfg = resolve_config(config_file)
     cfg.log.level = msg_level
 
-    # 日志文件路径: 默认写入 user_log_dir, 避免 CWD 漂移
-    log_file_path: str | None = log_file
-    if not log_file_path and cfg.log.dir_name and cfg.log.file_name:
-        log_file_path = str(
-            Path(user_log_dir(const.PACKAGE_NAME, appauthor=False))
-            / cfg.log.dir_name
-            / cfg.log.file_name
-        )
+    log_file_path = resolve_log_path(log_file, cfg.log.dir_name, cfg.log.file_name)
 
     log_config = cfg.log.model_dump()
     log_config['file_path'] = log_file_path

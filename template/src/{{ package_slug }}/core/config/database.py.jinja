@@ -67,11 +67,12 @@ class DatabaseConfig(BaseConfig):
     @classmethod
     def validate_port(cls, v: int, info: ValidationInfo) -> int:
         """根据数据库类型验证端口."""
-        import logging
+        import structlog
 
         db_type = info.data.get('type')
+        _log = structlog.get_logger(__name__)
         if db_type == DatabaseType.POSTGRESQL and v != 5432:
-            logging.getLogger(__name__).warning('非默认端口: %s', v)
+            _log.warning('非默认端口', port=v)
         elif db_type == DatabaseType.MYSQL and v != 3306:
-            logging.getLogger(__name__).warning('非默认MySQL端口: %s', v)
+            _log.warning('非默认MySQL端口', port=v)
         return v
