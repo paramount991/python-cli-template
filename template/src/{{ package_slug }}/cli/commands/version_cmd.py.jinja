@@ -5,7 +5,7 @@
 
 import typer
 
-from {{ package_slug }}.core import constants as const
+from {{ package_slug }}.core import version as ver
 
 app = typer.Typer(invoke_without_command=True)  # 无子命令时直接调用回调, 打印版本
 
@@ -13,4 +13,4 @@ app = typer.Typer(invoke_without_command=True)  # 无子命令时直接调用回
 @app.callback()
 def version() -> None:
     """显示版本信息."""
-    typer.echo(f'{const.PROJECT_DESC} V{const.PROJECT_VERSION}')
+    typer.echo(f'{ver.PROJECT_DESC} V{ver.PROJECT_VERSION}')

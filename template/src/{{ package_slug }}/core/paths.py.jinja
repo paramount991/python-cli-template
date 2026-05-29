@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+# Copyright (c) {{ author_name }}
+# All rights reserved.
+"""路径和配置类型常量."""
+
+from pathlib import Path
+
+from platformdirs import user_config_dir
+
+from .version import PACKAGE_NAME, PROJECT_NAME
+
+ROOT_PATH = Path(__file__).parent.parent
+DEFAULT_CONFIG_TYPE = 'toml'
+INSTALL_CONFIG_FILE_NAME = f'{PROJECT_NAME}.toml'
+
+
+def get_default_config_path(config_type: str = DEFAULT_CONFIG_TYPE) -> Path:
+    """返回缺省配置文件路径."""
+    default_config_file = f'{PROJECT_NAME}.{config_type}'
+    config_dir = user_config_dir(PACKAGE_NAME, appauthor=False)
+    return Path(config_dir) / default_config_file
+
+
+DEFAULT_CONFIG_PATH = get_default_config_path()

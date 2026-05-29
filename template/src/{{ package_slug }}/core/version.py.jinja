@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+# Copyright (c) {{ author_name }}
+# All rights reserved.
+"""版本信息和包元数据."""
+
+from importlib import metadata
+
+__version__ = '{{ project_version }}'
+
+PACKAGE_NAME = '{{ package_slug }}'
+PROJECT_NAME = '{{ project_slug }}'
+PROJECT_DESC = '{{ project_description }}'
+
+
+def get_project_version(project_name: str = PROJECT_NAME) -> str:
+    """动态读取项目版本号(pyproject.toml)."""
+    try:
+        return metadata.version(project_name)
+    except metadata.PackageNotFoundError:
+        return __version__
+
+
+PROJECT_VERSION = get_project_version()

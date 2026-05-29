@@ -6,7 +6,7 @@
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
-from {{ package_slug }}.core.constants import PROJECT_DESC, PROJECT_NAME, PROJECT_VERSION
+from {{ package_slug }}.core.version import PROJECT_DESC, PROJECT_NAME, PROJECT_VERSION
 
 from .base import BaseConfig
 
