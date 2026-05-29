@@ -13,11 +13,11 @@ import tomlkit
 import typer
 
 from {{ package_slug }}.cli.callbacks.global_options import GlobalOptions
-from {{ package_slug }}.core import constants as const
+from {{ package_slug }}.core.paths import DEFAULT_CONFIG_PATH, INSTALL_CONFIG_FILE_NAME
 from {{ package_slug }}.core.config.serializer import (
     save_default_config,
 )
-from {{ package_slug }}.core.config.settings import Settings, load_settings
+from {{ package_slug }}.core.config.loader import load_settings
 from {{ package_slug }}.core.decorators import handle_errors, log_command
 from {{ package_slug }}.core.log import get_logger
 
@@ -52,13 +52,32 @@ def init_config(
 def copy_config(
     ctx: typer.Context,
     force: bool = typer.Option(False, '--force', '-f', help='覆盖写入配置文件'),
+    list_configs: bool = typer.Option(
+        False, '--list', '-l',
+        help='列出 install/ 中的预定义配置文件',
+    ),
 ) -> None:
     """复制预定义配置文件."""
     config_path = _resolved_config_path(ctx)
-    _check_overwrite(config_path, force)
 
-    _repo_root = _find_repo_root()
-    config_src_path = _repo_root / 'install' / '{{ project_slug }}.toml'
+    try:
+        repo_root = _find_repo_root()
+    except FileNotFoundError:
+        typer.secho(
+            'install/ 目录不存在。config copy 仅适用于开发环境 (pip install -e .)。',
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=1) from None
+
+    install_dir = repo_root / 'install'
+    if list_configs:
+        typer.echo(f'预定义配置文件 ({install_dir}):')
+        for f in sorted(install_dir.glob('*.toml')):
+            typer.echo(f'  {f.name}')
+        raise typer.Exit()
+
+    _check_overwrite(config_path, force)
+    config_src_path = install_dir / INSTALL_CONFIG_FILE_NAME
     _audit_log.debug('config.copy: %s -> %s', config_src_path, config_path)
     typer.echo(f'复制预定义配置文件 {config_src_path} 到 {config_path}...')
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -288,7 +307,7 @@ def _resolved_config_path(ctx: typer.Context) -> Path:
     opts = root.obj
     if isinstance(opts, GlobalOptions) and opts.config_file:
         return Path(opts.config_file).expanduser().resolve()
-    return const.DEFAULT_CONFIG_PATH
+    return DEFAULT_CONFIG_PATH
 
 
 def _list_or_show(config_path: Path, output_format: str = 'toml') -> None:

@@ -28,6 +28,7 @@ def save_default_config(
     overwrite: bool = False,
     exclude_unset: bool = False,
     exclude_defaults: bool = False,
+    minimal: bool = False,
 ) -> Path:
     """生成缺省配置文件,使用配置类的默认值."""
     from .settings import Settings
@@ -35,8 +36,14 @@ def save_default_config(
     file_path = Path(file_path)
     if file_path.exists() and not overwrite:
         raise FileExistsError(f'文件已存在: {file_path}')
-    # model_construct() 绕过验证以获取纯默认值, 用于生成初始配置文件
+
+    if minimal:
+        exclude_unset = True
+        exclude_defaults = True
+
     instance = Settings.model_construct()
+    if not instance.app.name or not instance.app.version:
+        raise ValueError('应用名称或版本不能为空')
     data = instance.model_dump(
         mode='json',
         exclude_unset=exclude_unset,
